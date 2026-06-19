@@ -1,0 +1,1257 @@
+<!DOCTYPE html><html lang="pt-br"><head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title data-id="th-modified">SISTEMA TRA/CPO-D/CEO-D - Dr. Davi</title>
+    
+    <!-- Inclusão da biblioteca Chart.js (Gráficos) -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <style>
+        :root { 
+            --primary: #1a252f; --accent: #d32f2f; --bg: #e1e8ed; --success: #27ae60; 
+            --tra-plan: #f39c12; --tra-done: #2ecc71; --info: #3498db; --lost: #000; 
+            --tooth-stroke: #555; --warning: #f1c40f; --card-border: #bdc3c7;
+        }
+        
+        body { font-family: 'Segoe UI', sans-serif; background: var(--bg); margin: 0; padding: 5px; display: flex; flex-direction: column; align-items: center; }
+        .app-container { max-width: 500px; width: 100%; background: white; border-radius: 15px; box-shadow: 0 8px 20px rgba(0,0,0,0.15); padding: 8px; box-sizing: border-box; margin-bottom: 15px; }
+        
+        * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+
+        /* TELA DE LOGIN OVERLAY */
+        #login-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: var(--primary); z-index: 10000; display: flex; justify-content: center; align-items: center;
+        }
+        .login-box {
+            background: white; padding: 25px; border-radius: 15px; width: 85%; max-width: 360px;
+            text-align: center; box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+        }
+        .login-box h2 { margin-top: 0; font-size: 18px; color: var(--primary); margin-bottom: 5px; }
+        .login-box p { font-size: 11px; color: #7f8c8d; margin-bottom: 20px; }
+        .login-box input { margin-bottom: 12px; padding: 12px; font-size: 13px; }
+        .btn-login { background: var(--success); width: 100%; padding: 12px; font-size: 13px; font-weight: bold; }
+
+        /* USUÁRIO LOGADO STATUS */
+        .user-badge { background: #f1f5f9; border: 1px solid #cbd5e1; padding: 6px 10px; border-radius: 8px; font-size: 11px; color: #334155; display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; font-weight: 500; }
+        .btn-logout { background: transparent; color: var(--accent); border: none; padding: 0; font-size: 10px; font-weight: bold; cursor: pointer; flex: none; width: auto; }
+
+        #modal-alerta {
+            display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.8); z-index: 9999; justify-content: center; align-items: center;
+        }
+        .modal-content {
+            background: white; padding: 20px; border-radius: 15px; width: 85%; max-width: 350px;
+            text-align: center; border-top: 8px solid var(--warning); box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+        }
+        .modal-btns { display: flex; gap: 10px; margin-top: 20px; }
+        .modal-btns button { flex: 1; padding: 12px; border-radius: 8px; font-weight: bold; border: none; cursor: pointer; }
+        .btn-confirm { background: var(--success); color: white; }
+        .btn-cancel { background: var(--accent); color: white; }
+
+        @media print {
+            @page { margin: 0.5cm; size: portrait; }
+            body { background: white; padding: 0; display: block; }
+            .app-container, .dashboard-container, .btn-group, .btn-export, #historico, .header, .form-grid, .btn-all-pdf, #modal-alerta, .btn-danger, .toolbar-container, #login-overlay, .user-badge { display: none !important; }
+            #print-area { display: block !important; width: 100%; }
+            .print-item { 
+                page-break-inside: avoid; 
+                height: 31.5vh; 
+                border-bottom: 1px dashed #000; 
+                padding: 2px 0; 
+                display: flex; 
+                flex-direction: column; 
+                position: relative;
+                overflow: hidden;
+            }
+            .print-info { width: 100%; font-size: 10px; color: #000; padding-left: 10px; line-height: 1.2; }
+            .print-row { display: flex; flex-direction: row; align-items: center; justify-content: space-between; flex-grow: 1; margin-top: -10px; }
+            .print-odontograma { zoom: 0.55; position: relative; width: 420px; height: 420px; margin-left: 5px; }
+            .print-cpod { position: absolute; top: 5px; right: 10px; font-weight: 900; border: 1.5px solid #000; padding: 2px 6px; background: #eee !important; font-size: 10px; line-height: 1.3; text-align: right; }
+            .print-legend { display: grid !important; grid-template-columns: 1fr 1fr; gap: 3px; margin-right: 15px; }
+            .print-legend-item { display: flex; align-items: center; font-size: 8px; font-weight: bold; white-space: nowrap; }
+            .print-box { width: 10px; height: 10px; margin-right: 4px; border: 1px solid #000; flex-shrink: 0; }
+
+            body.print-dashboard-mode .app-container,
+            body.print-dashboard-mode #print-area { 
+                display: none !important; 
+            }
+            body.print-dashboard-mode .dashboard-container { 
+                display: block !important; 
+                width: 100% !important; 
+                max-width: 100% !important;
+                box-shadow: none !important;
+                border: none !important;
+            }
+            body.print-dashboard-mode #btn-print-dash, 
+            body.print-dashboard-mode .dash-filters { 
+                display: none !important; 
+            }
+        }
+
+        #print-area { display: none; }
+        .header { text-align: center; margin-bottom: 8px; border-bottom: 2px solid #eee; padding-bottom: 5px; }
+        .header h3 { margin: 0; font-size: 14px; color: var(--primary); }
+        .form-grid { display: grid; gap: 6px; margin-bottom: 10px; }
+        .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+        input, select { padding: 8px; border-radius: 6px; border: 1px solid #bdc3c7; font-size: 11px; width: 100%; box-sizing: border-box; background: white; }
+        
+        /* LINHA DE ÍNDICES DIVIDIDA NA TELA INICIAL */
+        .cpod-display { display: none; background: #f8f9fa; border: 1px dashed var(--primary); border-radius: 8px; padding: 6px; margin-bottom: 10px; }
+        .cpod-grid-layout { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 4px; text-align: center; }
+        .cpod-item-col { border-right: 1px dashed #cbd5e1; }
+        .cpod-item-col:last-child { border-right: none; }
+        .cpod-label { font-size: 9px; font-weight: bold; color: #64748b; text-transform: uppercase; }
+        .cpod-value { font-size: 16px; font-weight: 800; color: var(--primary); margin-top: 2px; }
+        .cpod-value.destaque { color: var(--accent); }
+
+        .toolbar-container { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; margin-bottom: 8px; background: #f1f5f9; padding: 6px; border-radius: 10px; border: 1px solid #cbd5e1; }
+        .tool-btn { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 6px 2px; border-radius: 6px; border: 2px solid transparent; background: #fff; cursor: pointer; transition: all 0.2s; }
+        .tool-btn:hover { background: #f8fafc; }
+        .tool-btn.active { border-color: var(--primary); box-shadow: 0 0 8px rgba(0,0,0,0.15); transform: scale(1.02); }
+        .tool-box { width: 14px; height: 14px; border-radius: 3px; border: 1px solid rgba(0,0,0,0.2); margin-bottom: 3px; }
+        .tool-label { font-size: 9px; font-weight: bold; color: #334155; text-align: center; }
+        
+        .odontograma-box { position: relative; width: 94vw; height: 94vw; max-width: 420px; max-height: 420px; background: #fff; margin: auto; border: 1px solid #eee; }
+        .axis-h, .axis-v { position: absolute; background: #bbb; pointer-events: none; z-index: 1; }
+        .axis-h { top: 50%; left: 0; width: 100%; height: 2px; transform: translateY(-50%); }
+        .axis-v { left: 50%; top: 0; height: 100%; width: 2px; transform: translateX(-50%); }
+        
+        .tooth { position: absolute; width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; z-index: 3; }
+        .tooth-label { position: absolute; font-size: 8px; font-weight: 900; pointer-events: none; z-index: 5; background: rgba(255,255,255,0.8); padding: 1px; border-radius: 2px; }
+        
+        svg { width: 100%; height: 100%; overflow: visible; cursor: pointer; }
+        svg path, svg circle { stroke: #333333 !important; stroke-width: 1px !important; stroke-linejoin: round; }
+        
+        .f-H { fill: #ffffff !important; }
+        .f-C { fill: var(--accent) !important; }
+        .f-O { fill: var(--info) !important; }
+        .f-T { fill: #ffffff !important; stroke: var(--tra-plan) !important; stroke-width: 2.5px !important; } 
+        .f-R { fill: var(--tra-done) !important; } 
+        .f-X { fill: #ffcccc !important; stroke: #f00 !important; stroke-width: 1.8px !important; }
+        .f-P { fill: var(--lost) !important; }
+
+        .btn-group { display: flex; gap: 6px; margin-top: 8px; }
+        button { flex: 1; padding: 12px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 11px; color: white; }
+        .btn-save { background: var(--success); }
+        .btn-clear { background: #95a5a6; }
+        .btn-pdf { background: #3498db; display: none; }
+        .btn-all-pdf { background: #8e44ad; margin-top: 6px; width: 100%; }
+        .btn-export { background: var(--primary); margin-top: 10px; width: 100%; }
+        .btn-danger { background: #e67e22; margin-top: 10px; width: 100%; }
+        
+        /* HISTÓRICO CONTAINER E FILTROS COMPACTOS */
+        #historico { margin-top: 12px; border-top: 2px solid #eee; padding-top: 8px; width: 100%; }
+        .hist-search-box { background: #f8fafc; border: 1px solid #e2e8f0; padding: 6px; border-radius: 10px; margin-bottom: 8px; display: grid; gap: 4px; }
+        .hist-search-row { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; }
+        #lista-cards { max-height: 250px; overflow-y: auto; }
+        .btn-load-more { background: #cbd5e1; color: #334155; margin-top: 6px; width: 100%; padding: 8px; font-size: 11px; }
+        .btn-load-more:hover { background: #b4c6dc; }
+        
+        .card { 
+            background: #fdfdfd; padding: 10px; border-radius: 8px; margin-top: 6px; 
+            font-size: 10px; border: 1px solid #eee; border-left: 5px solid var(--primary); 
+            cursor: pointer; display: flex; justify-content: space-between; align-items: center;
+        }
+        .card-info { flex-grow: 1; }
+        .btn-delete-card {
+            background: transparent; color: var(--accent); border: none; padding: 6px 10px;
+            font-size: 14px; cursor: pointer; border-radius: 6px; transition: background 0.2s;
+            width: auto; flex: none; display: flex; align-items: center; justify-content: center;
+        }
+        .btn-delete-card:hover { background: #fde8e8; }
+
+        .dashboard-container { max-width: 500px; width: 100%; background: #fff; border-radius: 15px; box-shadow: 0 8px 20px rgba(0,0,0,0.15); padding: 12px; box-sizing: border-box; margin-bottom: 20px; border-top: 5px solid #8e44ad; }
+        .dash-title { margin: 0 0 5px 0; font-size: 14px; text-align: center; color: var(--primary); font-weight: bold; }
+        
+        .dash-filters { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-bottom: 12px; background: #f8fafc; padding: 8px; border-radius: 8px; border: 1px solid #e2e8f0; }
+        .filter-group { display: flex; flex-direction: column; gap: 2px; position: relative; }
+        .filter-group label { font-size: 9px; font-weight: bold; color: #64748b; text-transform: uppercase; }
+        
+        .multiselect-box { 
+            background: white; border: 1px solid #cbd5e1; border-radius: 6px; padding: 6px; 
+            font-size: 11px; font-weight: 600; color: var(--primary); cursor: pointer;
+            display: flex; justify-content: space-between; align-items: center; min-height: 16px;
+        }
+        .multiselect-dropdown { 
+            display: none; position: absolute; top: 100%; left: 0; right: 0; 
+            background: white; border: 1px solid #cbd5e1; border-radius: 6px; 
+            max-height: 150px; overflow-y: auto; z-index: 100; box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            padding: 4px;
+        }
+        .multiselect-dropdown.active { display: block; }
+        .dropdown-item { display: flex; align-items: center; gap: 6px; padding: 4px; font-size: 11px; cursor: pointer; }
+        .dropdown-item:hover { background: #f1f5f9; }
+        .dropdown-item input { width: auto; cursor: pointer; }
+
+        .metrics-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6px; margin-bottom: 12px; }
+        .metric-card { background: #f8f9fa; border: 1px solid #e2e8f0; border-radius: 8px; padding: 8px; text-align: center; }
+        .metric-value { font-size: 16px; font-weight: bold; color: var(--primary); margin-top: 4px; }
+        .metric-label { font-size: 9px; color: #7f8c8d; font-weight: 600; text-transform: uppercase; }
+        .dash-table { width: 100%; border-collapse: collapse; font-size: 10px; margin-top: 8px; }
+        .dash-table th, .dash-table td { border: 1px solid #e2e8f0; padding: 6px; text-align: center; }
+        .dash-table th { background: #f1f5f9; color: #334155; }
+        
+        /* CORES DAS OCORRÊNCIAS CLÍNICAS */
+        .color-carie { color: var(--accent); font-weight: bold; }
+        .color-obturado { color: var(--info); font-weight: bold; }
+        .color-trap { color: #d35400; font-weight: bold; }
+        .color-trar { color: var(--tra-done); font-weight: bold; }
+        
+        .alert-badge { padding: 2px 4px; border-radius: 4px; font-weight: bold; font-size: 8px; }
+        .badge-high { background: #fed7d7; color: #c53030; }
+        .badge-low { background: #c6f6d5; color: #22543d; }
+    </style>
+</head>
+<body>
+
+<!-- OVERLAY DE LOGIN -->
+<div id="login-overlay">
+    <div class="login-box">
+        <h2>Acesso ao Sistema</h2>
+        <p>Insira suas credenciais profissionais para iniciar</p>
+        <input type="text" id="login-nome" placeholder="Nome Completo do Avaliador">
+        <input type="text" id="login-matricula" placeholder="Matrícula / Registro Profissional">
+        <button class="btn-login" onclick="realizarLogin()">Entrar no Sistema 🔓</button>
+    </div>
+</div>
+
+<div id="print-area"></div>
+
+<div id="modal-alerta">
+    <div class="modal-content">
+        <h4 id="titulo-modal">Aviso</h4>
+        <p id="msg-alerta" style="font-size: 12px; color: #333; margin: 15px 0;"></p>
+        <div class="modal-btns">
+            <button class="btn-cancel" id="btn-modal-nao">Não</button>
+            <button class="btn-confirm" id="btn-modal-sim">Sim</button>
+        </div>
+    </div>
+</div>
+
+<div class="app-container">
+    <div class="header">
+        <h3>LEVANTAMENTO EPIDEMIOLOGICO</h3>
+        <span>Dr. Davi Dias | TRA/CPO-D/CEO-D</span>
+    </div>
+
+    <div class="user-badge">
+        <div>👤 <span id="user-display-info">Carregando...</span></div>
+        <button class="btn-logout" onclick="realizarLogout()">Sair 📴</button>
+    </div>
+
+    <div id="aviso-edicao" style="display:none; background:#fff3cd; color:#856404; font-size:11px; padding:8px; text-align:center; border-radius:6px; font-weight:bold; margin-bottom:8px;">⚠️ MODO EDIÇÃO ATIVO</div>
+
+    <div class="form-grid">
+        <input type="text" id="escola" placeholder="Escola / Unidade">
+        <div class="form-row">
+            <input type="text" id="nome" placeholder="Paciente">
+            <input type="text" id="turma" placeholder="Turma">
+        </div>
+        <div class="form-row">
+            <input type="number" step="0.1" id="idade" placeholder="Idade (Anos)" onchange="atualizarCalculo()">
+            <input type="date" id="data_exame">
+        </div>
+    </div>
+
+    <div id="cpod-box" class="cpod-display">
+        <div class="cpod-grid-layout">
+            <div class="cpod-item-col">
+                <div class="cpod-label">CPO-D (Perm.)</div>
+                <div id="cpod-resultado-permanente" class="cpod-value">0</div>
+            </div>
+            <div class="cpod-item-col">
+                <div class="cpod-label">CEO-D (Decíd.)</div>
+                <div id="cpod-resultado-deciduo" class="cpod-value">0</div>
+            </div>
+            <div>
+                <div class="cpod-label">Índice Total</div>
+                <div id="cpod-resultado-total" class="cpod-value destaque">0</div>
+            </div>
+        </div>
+    </div>
+
+    <div style="font-size: 10px; font-weight: bold; color: var(--primary); margin-bottom: 4px; text-align: center;">🎨 SELECIONE UMA FERRAMENTA DE MARCAÇÃO RÁPIDA:</div>
+    <div class="toolbar-container" id="clin-toolbar">
+        <div class="tool-btn active" data-tool="H"><div class="tool-box" style="background:#fff; border: 1px solid #333;"></div><span class="tool-label">Hígido</span></div>
+        <div class="tool-btn" data-tool="C"><div class="tool-box" style="background:var(--accent)"></div><span class="tool-label">Cárie</span></div>
+        <div class="tool-btn" data-tool="O"><div class="tool-box" style="background:var(--info)"></div><span class="tool-label">Obturado</span></div>
+        <div class="tool-btn" data-tool="T"><div class="tool-box" style="background:#fff; border: 2px solid var(--tra-plan)"></div><span class="tool-label">TRA P.</span></div>
+        <div class="tool-btn" data-tool="R"><div class="tool-box" style="background:var(--tra-done)"></div><span class="tool-label">TRA R.</span></div>
+        <div class="tool-btn" data-tool="X"><div class="tool-box" style="background:#ffcccc; border:1px solid red"></div><span class="tool-label">E.I.</span></div>
+        <div class="tool-btn" data-tool="P"><div class="tool-box" style="background:var(--lost)"></div><span class="tool-label">Perdido</span></div>
+    </div>
+
+    <div class="odontograma-box" id="odontograma"></div>
+
+    <div class="btn-group">
+        <button class="btn-clear" onclick="resetarApp()">Novo</button>
+        <button id="btn-pdf" class="btn-pdf" onclick="gerarPdfIndividual()">💾 PDF</button>
+        <button id="btn-salvar" class="btn-save" onclick="salvar()">✅ Salvar na Nuvem</button>
+    </div>
+
+    <button class="btn-all-pdf" onclick="gerarRelatorioMassa()" id="btn-massa-dinamico">📄 PDF dos Registros Filtrados</button>
+    
+    <button class="btn-export" onclick="exportarCSV()">📊 Exportar CSV</button>
+    
+    <div id="historico">
+        <div style="font-weight: bold; font-size: 11px; color: var(--primary); margin-bottom: 5px;">📂 Histórico de Fichas na Nuvem:</div>
+        <div class="hist-search-box">
+            <input type="text" id="search-hist-nome" placeholder="🔍 Buscar por nome do paciente..." oninput="filtrarHistoricoLocal()">
+            <div class="hist-search-row">
+                <select id="search-hist-escola" onchange="filtrarHistoricoLocal()">
+                    <option value="">🏫 Todas as Escolas</option>
+                </select>
+                <select id="search-hist-turma" onchange="filtrarHistoricoLocal()">
+                    <option value="">👥 Todas as Turmas</option>
+                </select>
+            </div>
+            <div class="hist-search-row" style="margin-top:2px;">
+                <input type="date" id="search-hist-data" onchange="filtrarHistoricoLocal()" title="Filtrar por data do exame">
+                <select id="search-hist-condicao" onchange="filtrarHistoricoLocal()">
+                    <option value="">🩺 Todas as Condições</option>
+                    <option value="C">😈 Cárie Ativa</option>
+                    <option value="O">💎 Obturado/Restaurado</option>
+                    <option value="T">🕒 TRA Planejado</option>
+                    <option value="R">💚 TRA Realizado</option>
+                    <option value="X">🚨 Extração Indicada (E.I.)</option>
+                    <option value="P">⚫ Perdido/Extraído</option>
+                </select>
+            </div>
+        </div>
+        <div id="lista-cards"></div>
+        <button id="btn-load-more" class="btn-load-more" onclick="incrementarPagina()" style="display:none;">🔄 Carregar Mais Registros</button>
+    </div>
+
+    <button class="btn-danger" onclick="confirmarZerarBanco()">🗑️ Zerar Banco de Dados</button>
+</div>
+
+<!-- MONITORAMENTO MUNICIPAL -->
+<div class="dashboard-container">
+    <h3 class="dash-title">📊 Monitoramento Epidemiológico Municipal</h3>
+    
+    <button id="btn-print-dash" style="background:#27ae60; margin-top: 5px; margin-bottom: 12px; width: 100%; padding: 12px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 11px; color: white;">🖨️ Imprimir Relatório BI Municipal</button>
+    
+    <div class="dash-filters">
+        <div class="filter-group">
+            <label>Filtrar Escolas:</label>
+            <div class="multiselect-box" id="btn-filtro-escola" onclick="toggleDropdown('drop-escola', event)">
+                <span id="label-escola">Todas</span> ▾
+            </div>
+            <div class="multiselect-dropdown" id="drop-escola"></div>
+        </div>
+        <div class="filter-group">
+            <label>Filtrar Idades:</label>
+            <div class="multiselect-box" id="btn-filtro-idade" onclick="toggleDropdown('drop-idade', event)">
+                <span id="label-idade">Todas</span> ▾
+            </div>
+            <div class="multiselect-dropdown" id="drop-idade"></div>
+        </div>
+    </div>
+    
+    <div class="metrics-grid">
+        <div class="metric-card">
+            <div class="metric-label">CPO-D Médio</div>
+            <div id="dash-cpod-medio" class="metric-value">0.0</div>
+        </div>
+        <div class="metric-card">
+            <div class="metric-label">Prevalência</div>
+            <div id="dash-prevalencia" class="metric-value">0%</div>
+        </div>
+        <div class="metric-card">
+            <div class="metric-label">Total Fichas</div>
+            <div id="dash-total-fichas" class="metric-value">0</div>
+        </div>
+    </div>
+
+    <!-- NOVA SESSÃO: DETALHAMENTO DE OCORRÊNCIAS CLÍNICAS (B.I.) -->
+    <div style="font-weight: bold; font-size: 11px; color: var(--primary); margin-top: 10px;">🩺 Detalhes por Ocorrência Clínica (Grupo Filtrado):</div>
+    <table class="dash-table" style="margin-bottom: 15px;">
+        <thead>
+            <tr>
+                <th>Condição Diagnóstica</th>
+                <th>Qtd. Total Encontrada</th>
+                <th>Média por Aluno</th>
+            </tr>
+        </thead>
+        <tbody id="dash-ocorrencias-body">
+            <tr><td class="color-carie">😈 Cárie Ativa</td><td id="bi-qtd-carie">0</td><td id="bi-med-carie">0.0</td></tr>
+            <tr><td class="color-obturado">💎 Obturado/Restaurado</td><td id="bi-qtd-obturado">0</td><td id="bi-med-obturado">0.0</td></tr>
+            <tr><td class="color-trap">🕒 TRA Planejado</td><td id="bi-qtd-trap">0</td><td id="bi-med-trap">0.0</td></tr>
+            <tr><td class="color-trar">💚 TRA Realizado</td><td id="bi-qtd-trar">0</td><td id="bi-med-trar">0.0</td></tr>
+            <tr><td style="color: #c0392b; font-weight:bold;">🚨 Extração Indicada (E.I.)</td><td id="bi-qtd-ei">0</td><td id="bi-med-ei">0.0</td></tr>
+            <tr><td style="color: var(--lost); font-weight:bold;">⚫ Perdido/Extraído</td><td id="bi-qtd-perdido">0</td><td id="bi-med-perdido">0.0</td></tr>
+        </tbody>
+    </table>
+
+    <div style="margin-top: 15px; margin-bottom: 15px; background: #fafafa; padding: 5px; border-radius: 8px;">
+        <canvas id="chartEscolas" style="max-height: 200px; margin-bottom: 15px;"></canvas>
+        <canvas id="chartIdades" style="max-height: 200px;"></canvas>
+    </div>
+
+    <div style="font-weight: bold; font-size: 11px; color: var(--primary); margin-top: 10px;">🏫 Mapa de Risco por Unidade Escolar:</div>
+    <table class="dash-table">
+        <thead>
+            <tr>
+                <th>Escola</th>
+                <th>Fichas</th>
+                <th>CPO-D Médio</th>
+                <th>Status Risco</th>
+            </tr>
+        </thead>
+        <tbody id="dash-escolas-body">
+            <tr><td colspan="4" style="color:#7f8c8d;">Aguardando sincronização...</td></tr>
+        </tbody>
+    </table>
+
+    <div style="font-weight: bold; font-size: 11px; color: var(--primary); margin-top: 12px;">⏳ Indicadores por Faixa Etária:</div>
+    <table class="dash-table">
+        <thead>
+            <tr>
+                <th>Idade</th>
+                <th>Qtd. Alunos</th>
+                <th>CPO-D Médio</th>
+            </tr>
+        </thead>
+        <tbody id="dash-etario-body">
+            <tr><td colspan="3" style="color:#7f8c8d;">Aguardando sincronização...</td></tr>
+        </tbody>
+    </table>
+</div>
+
+<script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js";
+    import { 
+        getFirestore, collection, addDoc, doc, updateDoc, deleteDoc, onSnapshot, query, orderBy, getDocs 
+    } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore.js";
+
+    const firebaseConfig = {
+        apiKey: "AIzaSyDOxLN2fkJbW_npaijVbefIp3lB7xIYVzQ",
+        authDomain: "tra---odontograma.firebaseapp.com",
+        projectId: "tra---odontograma",
+        storageBucket: "tra---odontograma.firebasestorage.app",
+        messagingSenderId: "693357350626",
+        appId: "1:693357350626:web:20a070f057e6faadaad8bb",
+        measurementId: "G-M6Y05PTS3T"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+    const colecaoPacientes = collection(db, "pacientes");
+
+    const box = document.getElementById('odontograma');
+    let editandoId = null;
+    let dadosLocaisMemoria = []; 
+    let dadosFiltradosAtuais = []; 
+    let ferramentaAtiva = "H"; 
+
+    let escolasSelecionadas = [];
+    let idadesSelecionadas = [];
+
+    let chartEscolasInstance = null;
+    let chartIdadesInstance = null;
+    
+    let limiteFichasExibidas = 15;
+
+    window.realizarLogin = function() {
+        const nomeInput = document.getElementById('login-nome').value.trim().toUpperCase();
+        const matInput = document.getElementById('login-matricula').value.trim();
+
+        if(!nomeInput || !matInput) {
+            alert("Por favor, preencha o Nome e a Matrícula.");
+            return;
+        }
+
+        usuarioAtual.nome = nomeInput;
+        usuarioAtual.matricula = matInput;
+
+        sessionStorage.setItem('usuario_nome', usuarioAtual.nome);
+        sessionStorage.setItem('usuario_matricula', usuarioAtual.matricula);
+
+        verificarSessaoUsuario();
+    }
+
+    window.realizarLogout = function() {
+        sessionStorage.clear();
+        usuarioAtual = { nome: "", matricula: "" };
+        document.getElementById('login-nome').value = "";
+        document.getElementById('login-matricula').value = "";
+        document.getElementById('login-overlay').style.display = "flex";
+    }
+
+    function verificarSessaoUsuario() {
+        const nomeSalvo = sessionStorage.getItem('usuario_nome');
+        const matSalva = sessionStorage.getItem('usuario_matricula');
+
+        if(nomeSalvo && matSalva) {
+            usuarioAtual.nome = nomeSalvo;
+            usuarioAtual.matricula = matSalva;
+            document.getElementById('login-overlay').style.display = "none";
+            document.getElementById('user-display-info').innerText = `${usuarioAtual.nome} (Matrícula: ${usuarioAtual.matricula})`;
+        } else {
+            document.getElementById('login-overlay').style.display = "flex";
+        }
+    }
+
+    document.querySelectorAll('.tool-btn').forEach(btn => {
+        btn.onclick = () => {
+            document.querySelectorAll('.tool-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            ferramentaAtiva = btn.getAttribute('data-tool');
+        };
+    });
+
+    window.toggleDropdown = function(id, event) {
+        event.stopPropagation();
+        const drop = document.getElementById(id);
+        const isActive = drop.classList.contains('active');
+        fecharTodosDropdowns();
+        if(!isActive) drop.classList.add('active');
+    }
+
+    function fecharTodosDropdowns() {
+        document.querySelectorAll('.multiselect-dropdown').forEach(d => d.classList.remove('active'));
+    }
+
+    document.addEventListener('click', () => fecharTodosDropdowns());
+
+    const configsDentes = [
+        { d: [18,17,16,15,14,13,12,11], start: 186, end: 265, r: 0.44 }, { d: [21,22,23,24,25,26,27,28], start: 276, end: 355, r: 0.44 },
+        { d: [38,37,36,35,34,33,32,31], start: 6, end: 85, r: 0.44 }, { d: [41,42,43,44,45,46,47,48], start: 96, end: 175, r: 0.44 },
+        { d: [55,54,53,52,51], start: 190, end: 260, r: 0.28 }, { d: [61,62,63,64,65], start: 280, end: 350, r: 0.28 },
+        { d: [75,74,73,72,71], start: 10, end: 80, r: 0.28 }, { d: [81,82,83,84,85], start: 100, end: 170, r: 0.28 }
+    ];
+
+    const q = query(colecaoPacientes, orderBy("criadoEm", "desc"));
+    onSnapshot(q, (snapshot) => {
+        dadosLocaisMemoria = [];
+        snapshot.forEach((docSnap) => {
+            dadosLocaisMemoria.push({ id: docSnap.id, ...docSnap.data() });
+        });
+        
+        atualizarSelectsDeBuscaHistorico(dadosLocaisMemoria);
+        filtrarHistoricoLocal();
+        atualizarListasDeFiltros(dadosLocaisMemoria);
+        processarDadosEpidemiologicos(dadosLocaisMemoria);
+    });
+
+    function atualizarSelectsDeBuscaHistorico(dados) {
+        const selectEscola = document.getElementById('search-hist-escola');
+        const selectTurma = document.getElementById('search-hist-turma');
+        
+        const valorEscolaAtual = selectEscola.value;
+        const valorTurmaAtual = selectTurma.value;
+        
+        let escolas = new Set();
+        let turmas = new Set();
+        
+        dados.forEach(p => {
+            if(p.e) escolas.add(p.e.trim().toUpperCase());
+            if(p.t) turmas.add(p.t.trim().toUpperCase());
+        });
+        
+        selectEscola.innerHTML = '<option value="">🏫 Todas as Escolas</option>';
+        Array.from(escolas).sort().forEach(e => {
+            selectEscola.innerHTML += `<option value="${e}">${e}</option>`;
+        });
+        
+        selectTurma.innerHTML = '<option value="">👥 Todas as Turmas</option>';
+        Array.from(turmas).sort().forEach(t => {
+            selectTurma.innerHTML += `<option value="${t}">${t}</option>`;
+        });
+        
+        selectEscola.value = valorEscolaAtual;
+        selectTurma.value = valorTurmaAtual;
+    }
+
+    window.filtrarHistoricoLocal = function() {
+        const buscaNome = document.getElementById('search-hist-nome').value.trim().toUpperCase();
+        const buscaEscola = document.getElementById('search-hist-escola').value;
+        const buscaTurma = document.getElementById('search-hist-turma').value;
+        const buscaData = document.getElementById('search-hist-data').value;
+        const buscaCondicao = document.getElementById('search-hist-condicao').value;
+        
+        dadosFiltradosAtuais = dadosLocaisMemoria.filter(p => {
+            const bateNome = !buscaNome || (p.n && p.n.toUpperCase().includes(buscaNome));
+            const bateEscola = !buscaEscola || (p.e && p.e.trim().toUpperCase() === buscaEscola);
+            const bateTurma = !buscaTurma || (p.t && p.t.trim().toUpperCase() === buscaTurma);
+            const bateData = !buscaData || (p.d === buscaData);
+            const bateCondicao = !buscaCondicao || (p.det && p.det.some(item => item.s === buscaCondicao));
+            return bateNome && bateEscola && bateTurma && bateData && bateCondicao;
+        });
+        
+        const algumFiltroAtivo = buscaNome || buscaEscola || buscaTurma || buscaData || buscaCondicao;
+        const btnMassa = document.getElementById('btn-massa-dinamico');
+        
+        if (algumFiltroAtivo) {
+            renderCards(dadosFiltradosAtuais);
+            document.getElementById('btn-load-more').style.display = 'none';
+            btnMassa.innerText = `📄 PDF dos Registros Filtrados (${dadosFiltradosAtuais.length})`;
+            btnMassa.style.background = "#e67e22"; 
+        } else {
+            const fatiados = dadosFiltradosAtuais.slice(0, limiteFichasExibidas);
+            renderCards(fatiados);
+            
+            if (dadosFiltradosAtuais.length > limiteFichasExibidas) {
+                document.getElementById('btn-load-more').style.display = 'block';
+            } else {
+                document.getElementById('btn-load-more').style.display = 'none';
+            }
+            btnMassa.innerText = `📄 PDF de Todos da Nuvem (${dadosLocaisMemoria.length})`;
+            btnMassa.style.background = "#8e44ad";
+        }
+    }
+
+    window.incrementarPagina = function() {
+        limiteFichasExibidas += 15;
+        filtrarHistoricoLocal();
+    }
+
+    function atualizarListasDeFiltros(dados) {
+        const dropEscola = document.getElementById('drop-escola');
+        const dropIdade = document.getElementById('drop-idade');
+
+        let escolasExistentes = new Set();
+        let idadesExistentes = new Set();
+
+        dados.forEach(p => {
+            if(p.e) escolasExistentes.add(p.e.trim().toUpperCase());
+            if(p.i) idadesExistentes.add(Math.floor(parseFloat(p.i)));
+        });
+
+        const listaEscolas = Array.from(escolasExistentes).sort();
+        const listaIdades = Array.from(idadesExistentes).sort((a,b) => a - b);
+
+        let htmlEscola = `
+            <div class="dropdown-item">
+                <input type="checkbox" id="chk-esc-todas" ${escolasSelecionadas.length === 0 ? 'checked' : ''}>
+                <label for="chk-esc-todas" style="font-weight:bold;">-- Todas as Unidades --</label>
+            </div>
+        `;
+        listaEscolas.forEach(esc => {
+            const checked = escolasSelecionadas.includes(esc) ? 'checked' : '';
+            const escEscaped = esc.replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+            htmlEscola += `
+                <div class="dropdown-item">
+                    <input type="checkbox" class="chk-escola" value="${escEscaped}" ${checked}>
+                    <label>${escEscaped}</label>
+                </div>
+            `;
+        });
+        dropEscola.innerHTML = htmlEscola;
+
+        let htmlIdade = `
+            <div class="dropdown-item">
+                <input type="checkbox" id="chk-id-todas" ${idadesSelecionadas.length === 0 ? 'checked' : ''}>
+                <label for="chk-id-todas" style="font-weight:bold;">-- Todas as Idades --</label>
+            </div>
+        `;
+        listaIdades.forEach(id => {
+            const checked = idadesSelecionadas.includes(id) ? 'checked' : '';
+            htmlIdade += `
+                <div class="dropdown-item">
+                    <input type="checkbox" class="chk-idade" value="${id}" ${checked}>
+                    <label>${id} anos</label>
+                </div>
+            `;
+        });
+        dropIdade.innerHTML = htmlIdade;
+
+        configurarEventosFiltros();
+    }
+
+    function configurarEventosFiltros() {
+        const dropEscola = document.getElementById('drop-escola');
+        const dropIdade = document.getElementById('drop-idade');
+
+        [dropEscola, dropIdade].forEach(drop => {
+            drop.querySelectorAll('.dropdown-item').forEach(item => {
+                item.addEventListener('click', e => e.stopPropagation());
+            });
+        });
+
+        const chkEscTodas = document.getElementById('chk-esc-todas');
+        const chkIdTodas = document.getElementById('chk-id-todas');
+
+        chkEscTodas.addEventListener('change', () => {
+            if(chkEscTodas.checked) {
+                dropEscola.querySelectorAll('.chk-escola').forEach(c => c.checked = false);
+                escolasSelecionadas = [];
+            }
+            atualizarLabelsEProcessar();
+        });
+
+        dropEscola.querySelectorAll('.chk-escola').forEach(chk => {
+            chk.addEventListener('change', () => {
+                if(chk.checked) chkEscTodas.checked = false;
+                escolasSelecionadas = Array.from(dropEscola.querySelectorAll('.chk-escola:checked')).map(c => c.value);
+                if(escolasSelecionadas.length === 0) chkEscTodas.checked = true;
+                atualizarLabelsEProcessar();
+            });
+        });
+
+        chkIdTodas.addEventListener('change', () => {
+            if(chkIdTodas.checked) {
+                dropIdade.querySelectorAll('.chk-idade').forEach(c => c.checked = false);
+                idadesSelecionadas = [];
+            }
+            atualizarLabelsEProcessar();
+        });
+
+        dropIdade.querySelectorAll('.chk-idade').forEach(chk => {
+            chk.addEventListener('change', () => {
+                if(chk.checked) chkIdTodas.checked = false;
+                idadesSelecionadas = Array.from(dropIdade.querySelectorAll('.chk-idade:checked')).map(c => parseInt(c.value));
+                if(idadesSelecionadas.length === 0) chkIdTodas.checked = true;
+                atualizarLabelsEProcessar();
+            });
+        });
+    }
+
+    function atualizarLabelsEProcessar() {
+        const lblEsc = document.getElementById('label-escola');
+        if(escolasSelecionadas.length === 0) lblEsc.innerText = "Todas";
+        else if(escolasSelecionadas.length === 1) lblEsc.innerText = escolasSelecionadas[0];
+        else lblEsc.innerText = `${escolasSelecionadas.length} Escolas`;
+
+        const lblId = document.getElementById('label-idade');
+        if(idadesSelecionadas.length === 0) lblId.innerText = "Todas";
+        else if(idadesSelecionadas.length === 1) lblId.innerText = `${idadesSelecionadas[0]} anos`;
+        else lblId.innerText = `${idadesSelecionadas.length} Idades`;
+
+        processarDadosEpidemiologicos(dadosLocaisMemoria);
+    }
+
+    function processarDadosEpidemiologicos(dados) {
+        if(dados.length === 0) {
+            limparDashboard();
+            return;
+        }
+
+        let dadosFiltrados = dados.filter(p => {
+            const bateEscola = (escolasSelecionadas.length === 0 || (p.e && escolasSelecionadas.includes(p.e.trim().toUpperCase())));
+            const bateIdade = (idadesSelecionadas.length === 0 || (p.i && idadesSelecionadas.includes(Math.floor(parseFloat(p.i)))));
+            return bateEscola && bateIdade;
+        });
+
+        if(dadosFiltrados.length === 0) {
+            limparDashboardInformativo("Nenhum registro corresponde aos filtros combinados.");
+            return;
+        }
+
+        let totalCpodGeral = 0;
+        let pacientesComCarie = 0;
+        let analiseEscolas = {};
+        let analiseIdades = {};
+
+        let ocorrenciasGlobais = { C: 0, O: 0, T: 0, R: 0, X: 0, P: 0 };
+
+        dadosFiltrados.forEach(p => {
+            const indicesCalculados = calcularMultiplosIndices(p.det);
+            totalCpodGeral += indicesCalculados.cpod; 
+            if(indicesCalculados.total > 0) pacientesComCarie++;
+            
+            if(p.det) {
+                p.det.forEach(item => {
+                    if (ocorrenciasGlobais[item.s] !== undefined) {
+                        ocorrenciasGlobais[item.s]++;
+                    }
+                });
+            }
+
+            const nomeEscola = p.e ? p.e.trim().toUpperCase() : "NÃO INFORMADA";
+            if(!analiseEscolas[nomeEscola]) {
+                analiseEscolas[nomeEscola] = { totalCpod: 0, contagem: 0 };
+            }
+            analiseEscolas[nomeEscola].totalCpod += indicesCalculados.cpod;
+            analiseEscolas[nomeEscola].contagem++;
+
+            const faixaEtaria = p.i ? Math.floor(parseFloat(p.i)) + " anos" : "Não Informada";
+            if(!analiseIdades[faixaEtaria]) {
+                analiseIdades[faixaEtaria] = { totalCpod: 0, contagem: 0 };
+            }
+            analiseIdades[faixaEtaria].totalCpod += indicesCalculados.cpod;
+            analiseIdades[faixaEtaria].contagem++;
+        });
+
+        const totalAlunosFiltro = dadosFiltrados.length;
+
+        document.getElementById('dash-cpod-medio').innerText = (totalCpodGeral / totalAlunosFiltro).toFixed(1);
+        document.getElementById('dash-prevalencia').innerText = Math.round((pacientesComCarie / totalAlunosFiltro) * 100) + "%";
+        document.getElementById('dash-total-fichas').innerText = totalAlunosFiltro;
+
+        document.getElementById('bi-qtd-carie').innerText = ocorrenciasGlobais['C'];
+        document.getElementById('bi-med-carie').innerText = (ocorrenciasGlobais['C'] / totalAlunosFiltro).toFixed(1);
+
+        document.getElementById('bi-qtd-obturado').innerText = ocorrenciasGlobais['O'];
+        document.getElementById('bi-med-obturado').innerText = (ocorrenciasGlobais['O'] / totalAlunosFiltro).toFixed(1);
+
+        document.getElementById('bi-qtd-trap').innerText = ocorrenciasGlobais['T'];
+        document.getElementById('bi-med-trap').innerText = (ocorrenciasGlobais['T'] / totalAlunosFiltro).toFixed(1);
+
+        document.getElementById('bi-qtd-trar').innerText = ocorrenciasGlobais['R'];
+        document.getElementById('bi-med-trar').innerText = (ocorrenciasGlobais['R'] / totalAlunosFiltro).toFixed(1);
+
+        document.getElementById('bi-qtd-ei').innerText = ocorrenciasGlobais['X'];
+        document.getElementById('bi-med-ei').innerText = (ocorrenciasGlobais['X'] / totalAlunosFiltro).toFixed(1);
+
+        document.getElementById('bi-qtd-perdido').innerText = ocorrenciasGlobais['P'];
+        document.getElementById('bi-med-perdido').innerText = (ocorrenciasGlobais['P'] / totalAlunosFiltro).toFixed(1);
+
+        let labelsEscolas = [];
+        let valoresCpodEscolas = [];
+        let htmlEscolas = "";
+
+        for(let esc in analiseEscolas) {
+            const mediaEscola = analiseEscolas[esc].totalCpod / analiseEscolas[esc].contagem;
+            labelsEscolas.push(esc);
+            valoresCpodEscolas.push(mediaEscola.toFixed(1));
+
+            const statusBadge = mediaEscola > 3.0 ? '<span class="alert-badge badge-high">ALTO RISCO</span>' : '<span class="alert-badge badge-low">CONTROLADO</span>';
+            htmlEscolas += `<tr><td style="text-align:left; font-weight:bold;">${esc}</td><td>${analiseEscolas[esc].contagem}</td><td>${mediaEscola.toFixed(1)}</td><td>${statusBadge}</td></tr>`;
+        }
+        document.getElementById('dash-escolas-body').innerHTML = htmlEscolas;
+
+        let labelsIdades = [];
+        let valoresCpodIdades = [];
+        let htmlIdades = "";
+
+        const idadesOrdenadas = Object.keys(analiseIdades).sort((a,b) => parseInt(a) - parseInt(b));
+        
+        idadesOrdenadas.forEach(idades => {
+            const mediaIdade = analiseIdades[idades].totalCpod / analiseIdades[idades].contagem;
+            labelsIdades.push(idades);
+            valoresCpodIdades.push(mediaIdade.toFixed(1));
+
+            htmlIdades += `<tr><td style="font-weight:bold;">${idades}</td><td>${analiseIdades[idades].contagem}</td><td>${mediaIdade.toFixed(1)}</td></tr>`;
+        });
+        document.getElementById('dash-etario-body').innerHTML = htmlIdades;
+
+        if(chartEscolasInstance) chartEscolasInstance.destroy();
+        if(chartIdadesInstance) chartIdadesInstance.destroy();
+
+        const ctxEscolas = document.getElementById('chartEscolas').getContext('2d');
+        chartEscolasInstance = new Chart(ctxEscolas, {
+            type: 'bar',
+            data: {
+                labels: ['Cárie', 'Obturado', 'TRA P.', 'TRA R.', 'E.I.', 'Perdido'],
+                datasets: [{
+                    label: 'Distribuição Total de Ocorrências no Grupo',
+                    data: [ocorrenciasGlobais['C'], ocorrenciasGlobais['O'], ocorrenciasGlobais['T'], ocorrenciasGlobais['R'], ocorrenciasGlobais['X'], ocorrenciasGlobais['P']],
+                    backgroundColor: [
+                        'rgba(211, 47, 47, 0.75)',  
+                        'rgba(52, 152, 219, 0.75)', 
+                        'rgba(243, 156, 18, 0.75)',  
+                        'rgba(46, 204, 113, 0.75)',  
+                        'rgba(230, 126, 34, 0.75)',  
+                        'rgba(0, 0, 0, 0.75)'        
+                    ],
+                    borderWidth: 1
+                }]
+            },
+            options: { responsive: true, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true } } }
+        });
+
+        const ctxIdades = document.getElementById('chartIdades').getContext('2d');
+        chartIdadesInstance = new Chart(ctxIdades, {
+            type: 'line',
+            data: {
+                labels: labelsIdades,
+                datasets: [{
+                    label: 'Índice CPO-D por Faixa Etária',
+                    data: valoresCpodIdades,
+                    borderColor: 'rgba(26, 37, 47, 1)',
+                    backgroundColor: 'rgba(26, 37, 47, 0.1)',
+                    borderWidth: 2,
+                    tension: 0.3,
+                    fill: true
+                }]
+            },
+            options: { responsive: true, plugins: { legend: { display: true } }, scales: { y: { beginAtZero: true } } }
+        });
+    }
+
+    function limparDashboard() {
+        limparDashboardInformativo("Nenhum dado clínico registrado.");
+    }
+
+    function limparDashboardInformativo(mensagem) {
+        document.getElementById('dash-cpod-medio').innerText = "0.0";
+        document.getElementById('dash-prevalencia').innerText = "0%";
+        document.getElementById('dash-total-fichas').innerText = "0";
+        
+        ['carie', 'obturado', 'trap', 'trar', 'ei', 'perdido'].forEach(id => {
+            document.getElementById(`bi-qtd-${id}`).innerText = "0";
+            document.getElementById(`bi-med-${id}`).innerText = "0.0";
+        });
+
+        document.getElementById('dash-escolas-body').innerHTML = `<tr><td colspan="4" style="color:#7f8c8d;">${mensagem}</td></tr>`;
+        document.getElementById('dash-etario-body').innerHTML = `<tr><td colspan="3" style="color:#7f8c8d;">${mensagem}</td></tr>`;
+        if(chartEscolasInstance) chartEscolasInstance.destroy();
+        if(chartIdadesInstance) chartIdadesInstance.destroy();
+    }
+
+    document.getElementById('btn-print-dash').onclick = function() {
+        document.body.classList.add('print-dashboard-mode');
+        window.print();
+        setTimeout(() => {
+            document.body.classList.remove('print-dashboard-mode');
+        }, 1200);
+    };
+
+    function verificarCronologia(num, idade) {
+        if (!idade && idade !== 0) return true;
+        const meses = idade * 12;
+        const denteBase = num % 10;
+
+        if (num >= 51 && num <= 85) {
+            if (denteBase === 1 && meses < 6) return false;
+            if (denteBase === 2 && meses < 9) return false;
+            if (denteBase === 3 && meses < 16) return false;
+            if (denteBase === 4 && meses < 12) return false;
+            if (denteBase === 5 && meses < 20) return false;
+            if (denteBase === 1 && idade > 8) return false;
+            if (denteBase === 2 && idade > 9) return false;
+            if (denteBase === 3 && idade > 12) return false;
+            if (denteBase === 4 && idade > 11) return false;
+            if (denteBase === 5 && idade > 12) return false;
+        }
+
+        if (num >= 11 && num <= 48) {
+            if (denteBase === 1 && idade < 6) return false;
+            if (denteBase === 2 && idade < 7) return false;
+            if (denteBase === 3 && idade < 9) return false;
+            if (denteBase === 4 && idade < 9) return false;
+            if (denteBase === 5 && idade < 10) return false;
+            if (denteBase === 6 && idade < 5.5) return false;
+            if (denteBase === 7 && idade < 11) return false;
+            if (denteBase === 8 && idade < 17) return false;
+        }
+        return true;
+    }
+
+    function abrirModal(titulo, message, callbackSim) {
+        const modal = document.getElementById('modal-alerta');
+        document.getElementById('titulo-modal').innerText = titulo;
+        document.getElementById('msg-alerta').innerHTML = message;
+        modal.style.display = 'flex';
+        document.getElementById('btn-modal-sim').onclick = () => { modal.style.display = 'none'; callbackSim(); };
+        document.getElementById('btn-modal-nao').onclick = () => { modal.style.display = 'none'; };
+    }
+
+    window.confirmarZerarBanco = function() {
+        if(usuarioAtual.matricula !== "ADMIN" && usuarioAtual.matricula !== "DAVI123") {
+            alert("Apenas administradores cadastrados podem zerar o banco de dados global.");
+            return;
+        }
+
+        abrirModal("Cuidado: Exclusão Total na Nuvem", "Você tem certeza que deseja <b>apagar absolutamente todos os dados</b>?", async () => {
+            const querySnapshot = await getDocs(colecaoPacientes);
+            for (const docSnap of querySnapshot.docs) { await deleteDoc(doc(db, "pacientes", docSnap.id)); }
+            resetarApp();
+        });
+    }
+
+    window.apagarRegistroIndividual = function(id, nomePaciente, event) {
+        event.stopPropagation();
+        
+        if(usuarioAtual.matricula !== "ADMIN" && usuarioAtual.matricula !== "DAVI123") {
+            alert("Apenas administradores cadastrados possuem permissão para apagar fichas individuais.");
+            return;
+        }
+
+        abrirModal(
+            "Confirmar Exclusão", 
+            `Tem certeza que deseja remover permanentemente o registro de <b>${nomePaciente}</b> da nuvem?`, 
+            async () => {
+                try {
+                    await deleteDoc(doc(db, "pacientes", id));
+                    alert("Ficha clínica removida com sucesso.");
+                    if(editandoId === id) {
+                        resetarApp();
+                    }
+                } catch(erro) {
+                    console.error(erro);
+                    alert("Ocorreu um erro ao tentar excluir o registro do banco de dados.");
+                }
+            }
+        );
+    }
+
+    function criarDenteSVG(num, statusMap = null) {
+        const svgNS = "http://www.w3.org/2000/svg";
+        const svg = document.createElementNS(svgNS, "svg");
+        svg.setAttribute("viewBox", "0 0 30 30");
+        
+        const faces = (num % 10 <= 3) ? 
+            [{id:'V', d:"M15,15 L1,1 A20,20 0 0,1 29,1 Z"}, {id:'L', d:"M15,15 L1,29 A20,20 0 0,0 29,29 Z"}, {id:'M', d:"M15,15 L1,1 A20,20 0 0,0 1,29 Z"}, {id:'D', d:"M15,15 L29,1 A20,20 0 0,1 29,29 Z"}] :
+            [{id:'O', d:"circle", cx:15, cy:15, r:8}, {id:'V', d:"M8.5,8.5 A10,10 0 0,1 21.5,8.5 L29,1 A20,20 0 0,0 1,1 Z"}, {id:'L', d:"M8.5,21.5 A10,10 0 0,0 21.5,21.5 L29,29 A20,20 0 0,1 1,29 Z"}, {id:'M', d:"M8.5,8.5 A10,10 0 0,0 8.5,21.5 L1,29 A20,20 0 0,1 1,1 Z"}, {id:'D', d:"M21.5,8.5 A10,10 0 0,1 21.5,21.5 L29,29 A20,20 0 0,0 29,1 Z"}];
+
+        faces.forEach(f => {
+            const el = document.createElementNS(svgNS, f.d === "circle" ? "circle" : "path");
+            if(f.d === "circle"){ el.setAttribute("cx", f.cx); el.setAttribute("cy", f.cy); el.setAttribute("r", f.r); }
+            else { el.setAttribute("d", f.d); }
+            
+            const s = (statusMap && statusMap[f.id]) ? statusMap[f.id] : 'H';
+            el.setAttribute("class", `f-${s}`); el.setAttribute("data-status", s); el.setAttribute("data-face", f.id);
+            
+            el.onclick = (e) => { 
+                e.stopPropagation();
+                const idade = parseFloat(document.getElementById('idade').value);
+                if (el.getAttribute('data-status') === 'H' && !verificarCronologia(num, idade)) {
+                    abrirModal("Aviso de Cronologia", `O dente <b>${num}</b> é incompatível com a idade de <b>${idade} anos</b>.`, () => { aplicarFerramenta(el, svg, num); });
+                } else { 
+                    aplicarFerramenta(el, svg, num); 
+                }
+            };
+            svg.appendChild(el);
+        });
+        return svg;
+    }
+
+    function aplicarFerramenta(el, svg, num) {
+        if (ferramentaAtiva === 'X' || herramientaAtiva === 'P' || ferramentaAtiva === 'H') {
+            svg.querySelectorAll('[data-status]').forEach(face => {
+                face.setAttribute('data-status', ferramentaAtiva);
+                face.setAttribute('class', `f-${ferramentaAtiva}`);
+            });
+        } else {
+            el.setAttribute('data-status', ferramentaAtiva);
+            el.setAttribute('class', `f-${ferramentaAtiva}`);
+        }
+        atualizarCalculo();
+    }
+
+    function gerarDentes(container, registro = null) {
+        container.innerHTML = '<div class="axis-h"></div><div class="axis-v"></div>';
+        const center = 210;
+        configsDentes.forEach(conf => {
+            conf.d.forEach((num, i) => {
+                const passo = (conf.end - conf.start) / (conf.d.length - 1 || 1);
+                const rad = (conf.start + (i * passo)) * (Math.PI / 180);
+                const w = document.createElement('div'); w.className = 'tooth';
+                w.id = `t-${num}`;
+                w.style.left = (center + (420 * conf.r) * Math.cos(rad)) + 'px';
+                w.style.top = (center + (420 * conf.r) * Math.sin(rad)) + 'px';
+                w.style.transform = 'translate(-50%, -50%)';
+                
+                let sMap = null;
+                if(registro) { sMap = {}; registro.det.filter(x => x.d == num).forEach(x => sMap[x.f] = x.s); }
+                
+                w.appendChild(criarDenteSVG(num, sMap));
+                const label = document.createElement('div'); label.className = 'tooth-label'; label.innerText = num;
+                
+                w.onclick = () => {
+                    const svgEl = w.querySelector('svg');
+                    svgEl.querySelectorAll('[data-status]').forEach(face => {
+                        face.setAttribute('data-status', ferramentaAtiva);
+                        face.setAttribute('class', `f-${ferramentaAtiva}`);
+                    });
+                    atualizarCalculo();
+                };
+
+                w.appendChild(label);
+                container.appendChild(w);
+            });
+        });
+    }
+
+    window.atualizarCalculo = function() {
+        let det = [];
+        document.querySelectorAll('#odontograma .tooth').forEach(t => {
+            const num = t.id.replace('t-','');
+            t.querySelectorAll('[data-status]').forEach(f => det.push({ d: parseInt(num), s: f.getAttribute('data-status') }));
+        });
+        
+        const resultados = calcularMultiplosIndices(det);
+        
+        document.getElementById('cpod-box').style.display = 'block';
+        document.getElementById('cpod-resultado-permanente').innerText = resultados.cpod;
+        document.getElementById('cpod-resultado-deciduo').innerText = resultados.ceod;
+        document.getElementById('cpod-resultado-total').innerText = resultados.total;
+    }
+
+    function calcularMultiplosIndices(detalhes) {
+        const dentesPermanentesAfetados = new Set();
+        const dentesDeciduosAfetados = new Set();
+        const simbolosPatologicos = ['C', 'O', 'T', 'R', 'X', 'P']; 
+
+        detalhes.forEach(item => {
+            const numDente = parseInt(item.d);
+            if (simbolosPatologicos.includes(item.s)) {
+                if (numDente >= 11 && numDente <= 48 && ![18,28,38,48].includes(numDente)) {
+                    dentesPermanentesAfetados.add(numDente);
+                } 
+                else if (numDente >= 51 && numDente <= 85) {
+                    dentesDeciduosAfetados.add(numDente);
+                }
+            }
+        });
+
+        const cpod = dentesPermanentesAfetados.size;
+        const ceod = dentesDeciduosAfetados.size;
+
+        return { cpod: cpod, ceod: ceod, total: cpod + ceod };
+    }
+
+    window.salvar = function() {
+        const n = document.getElementById('nome').value.toUpperCase(); if(!n) return alert("Nome do Paciente pendente.");
+        
+        let det = [];
+        document.querySelectorAll('#odontograma .tooth').forEach(t => {
+            const num = t.id.replace('t-','');
+            t.querySelectorAll('[data-status]').forEach(f => det.push({ d: num, f: f.getAttribute('data-face'), s: f.getAttribute('data-status') }));
+        });
+
+        const r = { 
+            n, 
+            e: document.getElementById('escola').value.toUpperCase(), 
+            a: `${usuarioAtual.nome} (${usuarioAtual.matricula})`, 
+            t: document.getElementById('turma').value, 
+            i: document.getElementById('idade').value, 
+            d: document.getElementById('data_exame').value, 
+            det, 
+            criadoEm: new Date().getTime()
+        };
+
+        if(editandoId) {
+            updateDoc(doc(db, "pacientes", editandoId), r).then(() => resetarApp()).catch(() => alert("Erro ao atualizar dados na nuvem."));
+        } else {
+            addDoc(colecaoPacientes, r).then(() => resetarApp()).catch(() => alert("Erro ao salvar na nuvem."));
+        }
+    }
+
+    window.visualizar = function(id) {
+        const r = dadosLocaisMemoria.find(x => x.id === id); if(!r) return;
+        editandoId = id; 
+        document.getElementById('aviso-edicao').style.display = 'block';
+        document.getElementById('btn-pdf').style.display = 'block';
+        document.getElementById('nome').value = r.n; document.getElementById('escola').value = r.e;
+        document.getElementById('turma').value = r.t;
+        document.getElementById('idade').value = r.i; document.getElementById('data_exame').value = r.d;
+        gerarDentes(box, r); window.atualizarCalculo(); window.scrollTo(0,0);
+    }
+
+    window.gerarPdfIndividual = function() {
+        if (!editandoId) {
+            alert("Por favor, selecione ou salve um paciente no histórico abaixo antes de extrair o PDF.");
+            return;
+        }
+        
+        const r = dadosLocaisMemoria.find(x => x.id === editandoId);
+        if (!r) return;
+
+        let detAtual = [];
+        document.querySelectorAll('#odontograma .tooth').forEach(t => {
+            const num = t.id.replace('t-','');
+            t.querySelectorAll('[data-status]').forEach(f => {
+                detAtual.push({ d: parseInt(num), s: f.getAttribute('data-status') });
+            });
+        });
+
+        const ind = calcularMultiplosIndices(detAtual);
+        const area = document.getElementById('print-area'); 
+        area.innerHTML = ''; 
+        
+        const item = document.createElement('div'); 
+        item.className = 'print-item';
+        item.innerHTML = `
+            <div class="print-info"><b>Paciente:</b> ${document.getElementById('nome').value.toUpperCase()} | <b>Idade:</b> ${document.getElementById('idade').value} | <b>Turma:</b> ${document.getElementById('turma').value}<br><b>Escola:</b> ${document.getElementById('escola').value.toUpperCase()} | <b>Avaliador:</b> ${r.a || usuarioAtual.nome} | <b>Data:</b> ${document.getElementById('data_exame').value}</div>
+            <div class="print-cpod">CPO-D: ${ind.cpod}<br>CEO-D: ${ind.ceod}<br>TOTAL: ${ind.total}</div>
+            <div class="print-row">
+                <div class="print-odontograma"></div>
+                <div class="print-legend">
+                    <div class="print-legend-item"><div class="print-box" style="background:var(--accent)"></div>Cárie</div>
+                    <div class="print-legend-item"><div class="print-box" style="background:var(--info)"></div>Obt.</div>
+                    <div class="print-legend-item"><div class="print-box" style="background:#ffffff; border: 2px solid var(--tra-plan)"></div>TRA P.</div>
+                    <div class="print-legend-item"><div class="print-box" style="background:var(--tra-done)"></div>TRA R.</div>
+                    <div class="print-legend-item"><div class="print-box" style="background:var(--lost)"></div>Perdido</div>
+                    <div class="print-legend-item"><div class="print-box" style="background:#ffcccc; border:1px solid red"></div>E.I.</div>
+                </div>
+            </div>`;
+        
+        gerarDentes(item.querySelector('.print-odontograma'), r);
+        area.appendChild(item);
+        window.print();
+    }
+
+    window.gerarRelatorioMassa = function() {
+        if(dadosFiltradosAtuais.length === 0) {
+            alert("Nenhum registro encontrado com os critérios de filtragem atuais para impressão.");
+            return;
+        }
+
+        const area = document.getElementById('print-area'); 
+        area.innerHTML = '';
+        
+        dadosFiltradosAtuais.forEach(r => {
+            const ind = calcularMultiplosIndices(r.det);
+            const item = document.createElement('div'); 
+            item.className = 'print-item';
+            item.innerHTML = `
+                <div class="print-info"><b>Paciente:</b> ${r.n} | <b>Idade:</b> ${r.i} | <b>Turma:</b> ${r.t}<br><b>Escola:</b> ${r.e} | <b>Avaliador:</b> ${r.a} | <b>Data:</b> ${r.d}</div>
+                <div class="print-cpod">CPO-D: ${ind.cpod}<br>CEO-D: ${ind.ceod}<br>TOTAL: ${ind.total}</div>
+                <div class="print-row">
+                    <div class="print-odontograma"></div>
+                    <div class="print-legend">
+                        <div class="print-legend-item"><div class="print-box" style="background:var(--accent)"></div>Cárie</div>
+                        <div class="print-legend-item"><div class="print-box" style="background:var(--info)"></div>Obt.</div>
+                        <div class="print-legend-item"><div class="print-box" style="background:#ffffff; border: 2px solid var(--tra-plan)"></div>TRA P.</div>
+                        <div class="print-legend-item"><div class="print-box" style="background:var(--tra-done)"></div>TRA R.</div>
+                        <div class="print-legend-item"><div class="print-box" style="background:var(--lost)"></div>Perdido</div>
+                        <div class="print-legend-item"><div class="print-box" style="background:#ffcccc; border:1px solid red"></div>E.I.</div>
+                    </div>
+                </div>`;
+            gerarDentes(item.querySelector('.print-odontograma'), r);
+            area.appendChild(item);
+        });
+        window.print();
+    }
+
+    window.exportarCSV = function() {
+        let csv = "Data;Paciente;Idade;Escola;Avaliador;CPO-D;CEO-D;Indice_Total\n";
+        dadosFiltradosAtuais.forEach(p => {
+            const ind = calcularMultiplosIndices(p.det);
+            csv += `${p.d};${p.n};${p.i};${p.e};${p.a};${ind.cpod};${ind.ceod};${ind.total}\n`;
+        });
+        const blob = new Blob(["\ufeff"+csv], {type:'text/csv'});
+        const a = document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='CPO_CEO_Filtrados.csv'; a.click();
+    }
+
+    window.resetarApp = function() {
+        editandoId = null; document.getElementById('aviso-edicao').style.display = 'none';
+        document.getElementById('btn-pdf').style.display = 'none'; document.getElementById('cpod-box').style.display = 'none';
+        document.querySelectorAll('input').forEach(i => i.id !== 'data_exame' && i.id !== 'login-nome' && i.id !== 'login-matricula' && (i.value = ""));
+        document.getElementById('data_exame').valueAsDate = new Date();
+        document.querySelectorAll('.tool-btn').forEach(b => b.classList.remove('active'));
+        document.querySelector('[data-tool="H"]').classList.add('active');
+        ferramentaAtiva = "H";
+        
+        limiteFichasExibidas = 15;
+        document.getElementById('search-hist-nome').value = "";
+        document.getElementById('search-hist-escola').value = "";
+        document.getElementById('search-hist-turma').value = "";
+        document.getElementById('search-hist-data').value = ""; 
+        document.getElementById('search-hist-condicao').value = "";
+        
+        gerarDentes(box); 
+        filtrarHistoricoLocal();
+    }
+
+    function renderCards(dados) {
+        document.getElementById('lista-cards').innerHTML = dados.map(p => `
+            <div class="card" onclick="visualizar('${p.id}')">
+                <div class="card-info">
+                    <b>${p.n}</b> - ${p.e || 'S/E'} ${p.t ? '['+p.t+']' : ''}<br>
+                    <small style="color:#7f8c8d">Data: ${p.d} | Avaliador: ${p.a || 'Não registrado'}</small>
+                </div>
+                <button class="btn-delete-card" onclick="apagarRegistroIndividual('${p.id}', '${p.n}', event)" title="Excluir ficha permanentemente">🗑️</button>
+            </div>`).join('');
+    }
+
+    var usuarioAtual = { nome: sessionStorage.getItem('usuario_nome') || "", matricula: sessionStorage.getItem('usuario_matricula') || "" };
+    verificarSessaoUsuario();
+    resetarApp();
+</script>
+
+</body></html>
