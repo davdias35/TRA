@@ -1010,7 +1010,7 @@
     }
 
     function aplicarFerramenta(el, svg, num) {
-        if (ferramentaAtiva === 'X' || herramientaAtiva === 'P' || ferramentaAtiva === 'H') {
+        if (ferramentaAtiva === 'X' || ferramentaAtiva === 'P' || ferramentaAtiva === 'H') {
             svg.querySelectorAll('[data-status]').forEach(face => {
                 face.setAttribute('data-status', ferramentaAtiva);
                 face.setAttribute('class', `f-${ferramentaAtiva}`);
