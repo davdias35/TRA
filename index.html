@@ -1,9 +1,8 @@
 <!DOCTYPE html><html lang="pt-br"><head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title data-id="th-modified">SISTEMA TRA/CPO-D/CEO-D - Dr. Davi</title>
+    <title>SISTEMA TRA/CPO-D/CEO-D - Dr. Davi</title>
     
-    <!-- Inclusão da biblioteca Chart.js (Gráficos) -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
     <style>
@@ -110,6 +109,7 @@
         .tool-btn:hover { background: #f8fafc; }
         .tool-btn.active { border-color: var(--primary); box-shadow: 0 0 8px rgba(0,0,0,0.15); transform: scale(1.02); }
         .tool-box { width: 14px; height: 14px; border-radius: 3px; border: 1px solid rgba(0,0,0,0.2); margin-bottom: 3px; }
+        .tool-btn.active .tool-box { box-shadow: 0 0 4px rgba(0,0,0,0.5); }
         .tool-label { font-size: 9px; font-weight: bold; color: #334155; text-align: center; }
         
         .odontograma-box { position: relative; width: 94vw; height: 94vw; max-width: 420px; max-height: 420px; background: #fff; margin: auto; border: 1px solid #eee; }
@@ -200,12 +200,15 @@
         
         .alert-badge { padding: 2px 4px; border-radius: 4px; font-weight: bold; font-size: 8px; }
         .badge-high { background: #fed7d7; color: #c53030; }
+        .badge-medium { background: #feebc8; color: #c05621; }
         .badge-low { background: #c6f6d5; color: #22543d; }
+
+        /* CONTAINER DA CLASSIFICAÇÃO DE RISCO CRÍTICO */
+        .risco-container { max-height: 200px; overflow-y: auto; border: 1px solid #e2e8f0; border-radius: 8px; margin-top: 6px; background: #fff; }
     </style>
 </head>
 <body>
 
-<!-- OVERLAY DE LOGIN -->
 <div id="login-overlay">
     <div class="login-box">
         <h2>Acesso ao Sistema</h2>
@@ -326,7 +329,6 @@
     <button class="btn-danger" onclick="confirmarZerarBanco()">🗑️ Zerar Banco de Dados</button>
 </div>
 
-<!-- MONITORAMENTO MUNICIPAL -->
 <div class="dashboard-container">
     <h3 class="dash-title">📊 Monitoramento Epidemiológico Municipal</h3>
     
@@ -351,8 +353,8 @@
     
     <div class="metrics-grid">
         <div class="metric-card">
-            <div class="metric-label">CPO-D Médio</div>
-            <div id="dash-cpod-medio" class="metric-value">0.0</div>
+            <div class="metric-label">Índices Médios</div>
+            <div id="dash-cpod-medio" class="metric-value" style="font-size: 11px; line-height: 1.3;">CPO: 0.0<br>CEO: 0.0</div>
         </div>
         <div class="metric-card">
             <div class="metric-label">Prevalência</div>
@@ -364,8 +366,24 @@
         </div>
     </div>
 
-    <!-- NOVA SESSÃO: DETALHAMENTO DE OCORRÊNCIAS CLÍNICAS (B.I.) -->
-    <div style="font-weight: bold; font-size: 11px; color: var(--primary); margin-top: 10px;">🩺 Detalhes por Ocorrência Clínica (Grupo Filtrado):</div>
+    <div style="font-weight: bold; font-size: 11px; color: var(--primary); margin-top: 12px;">🚨 Classificação de Risco Individual (C, X, P, TRA P.):</div>
+    <div class="risco-container">
+        <table class="dash-table" style="margin-top: 0;">
+            <thead>
+                <tr>
+                    <th style="text-align: left;">Paciente</th>
+                    <th>Escola/Turma</th>
+                    <th>Dentes Afetados</th>
+                    <th>Prioridade</th>
+                </tr>
+            </thead>
+            <tbody id="dash-prioridades-body">
+                <tr><td colspan="4" style="color:#7f8c8d; padding: 10px;">Aguardando sincronização...</td></tr>
+            </tbody>
+        </table>
+    </div>
+
+    <div style="font-weight: bold; font-size: 11px; color: var(--primary); margin-top: 15px;">🩺 Detalhes por Ocorrência Clínica (Grupo Filtrado):</div>
     <table class="dash-table" style="margin-bottom: 15px;">
         <thead>
             <tr>
@@ -395,7 +413,7 @@
             <tr>
                 <th>Escola</th>
                 <th>Fichas</th>
-                <th>CPO-D Médio</th>
+                <th>Médias Obtidas</th>
                 <th>Status Risco</th>
             </tr>
         </thead>
@@ -410,7 +428,7 @@
             <tr>
                 <th>Idade</th>
                 <th>Qtd. Alunos</th>
-                <th>CPO-D Médio</th>
+                <th>Médias Coletadas</th>
             </tr>
         </thead>
         <tbody id="dash-etario-body">
@@ -740,45 +758,92 @@
         }
 
         let totalCpodGeral = 0;
+        let totalCeodGeral = 0;
         let pacientesComCarie = 0;
         let analiseEscolas = {};
         let analiseIdades = {};
+        let listaPrioridadesCriancas = [];
 
         let ocorrenciasGlobais = { C: 0, O: 0, T: 0, R: 0, X: 0, P: 0 };
 
         dadosFiltrados.forEach(p => {
             const indicesCalculados = calcularMultiplosIndices(p.det);
             totalCpodGeral += indicesCalculados.cpod; 
+            totalCeodGeral += indicesCalculados.ceod;
+            
             if(indicesCalculados.total > 0) pacientesComCarie++;
             
+            // Cálculo do risco individual incluindo Cárie (C), Extração Indicada (X), Perdido (P) e TRA Planejado (T)
+            let totalDentesCriticos = 0;
+            let dentesJaContadosCriticos = new Set();
+
             if(p.det) {
                 p.det.forEach(item => {
                     if (ocorrenciasGlobais[item.s] !== undefined) {
                         ocorrenciasGlobais[item.s]++;
                     }
+                    if (['C', 'X', 'P', 'T'].includes(item.s)) {
+                        dentesJaContadosCriticos.add(parseInt(item.d));
+                    }
+                });
+            }
+            totalDentesCriticos = dentesJaContadosCriticos.size;
+
+            // FILTRAGEM CRÍTICA: Só entra na lista se tiver pelo menos 1 intercorrência ativa
+            if (totalDentesCriticos > 0) {
+                listaPrioridadesCriancas.push({
+                    nome: p.n || "SEM NOME",
+                    escola: p.e || "S/E",
+                    turma: p.t || "S/T",
+                    idRef: p.id,
+                    pontuacao: totalDentesCriticos
                 });
             }
 
             const nomeEscola = p.e ? p.e.trim().toUpperCase() : "NÃO INFORMADA";
             if(!analiseEscolas[nomeEscola]) {
-                analiseEscolas[nomeEscola] = { totalCpod: 0, contagem: 0 };
+                analiseEscolas[nomeEscola] = { totalCpod: 0, totalCeod: 0, contagem: 0 };
             }
             analiseEscolas[nomeEscola].totalCpod += indicesCalculados.cpod;
+            analiseEscolas[nomeEscola].totalCeod += indicesCalculados.ceod;
             analiseEscolas[nomeEscola].contagem++;
 
             const faixaEtaria = p.i ? Math.floor(parseFloat(p.i)) + " anos" : "Não Informada";
             if(!analiseIdades[faixaEtaria]) {
-                analiseIdades[faixaEtaria] = { totalCpod: 0, contagem: 0 };
+                analiseIdades[faixaEtaria] = { totalCpod: 0, totalCeod: 0, contagem: 0 };
             }
             analiseIdades[faixaEtaria].totalCpod += indicesCalculados.cpod;
+            analiseIdades[faixaEtaria].totalCeod += indicesCalculados.ceod;
             analiseIdades[faixaEtaria].contagem++;
         });
 
         const totalAlunosFiltro = dadosFiltrados.length;
 
-        document.getElementById('dash-cpod-medio').innerText = (totalCpodGeral / totalAlunosFiltro).toFixed(1);
+        document.getElementById('dash-cpod-medio').innerHTML = `CPO: ${(totalCpodGeral / totalAlunosFiltro).toFixed(1)}<br>CEO: ${(totalCeodGeral / totalAlunosFiltro).toFixed(1)}`;
         document.getElementById('dash-prevalencia').innerText = Math.round((pacientesComCarie / totalAlunosFiltro) * 100) + "%";
         document.getElementById('dash-total-fichas').innerText = totalAlunosFiltro;
+
+        // Renderização da Tabela de Classificação de Risco (Exibe apenas quem tem ocorrências)
+        listaPrioridadesCriancas.sort((a, b) => b.pontuacao - a.pontuacao);
+        let htmlPrioridades = "";
+        listaPrioridadesCriancas.forEach(c => {
+            let badgeRisco = "";
+            if (c.pontuacao >= 4) {
+                badgeRisco = '<span class="alert-badge badge-high">ALTO RISCO CRÍTICO</span>';
+            } else {
+                badgeRisco = '<span class="alert-badge badge-medium">MÉDIO RISCO</span>';
+            }
+
+            htmlPrioridades += `
+                <tr style="cursor:pointer;" onclick="visualizar('${c.idRef}')">
+                    <td style="text-align:left; font-weight:bold;">⚠️ ${c.nome}</td>
+                    <td>${c.escola} (${c.turma})</td>
+                    <td style="font-weight:bold; font-size:11px;">${c.pontuacao}</td>
+                    <td>${badgeRisco}</td>
+                </tr>
+            `;
+        });
+        document.getElementById('dash-prioridades-body').innerHTML = htmlPrioridades || '<tr><td colspan="4" style="color:#7f8c8d; padding: 10px;">Nenhuma criança necessita de intervenção prioritária no grupo filtrado.</td></tr>';
 
         document.getElementById('bi-qtd-carie').innerText = ocorrenciasGlobais['C'];
         document.getElementById('bi-med-carie').innerText = (ocorrenciasGlobais['C'] / totalAlunosFiltro).toFixed(1);
@@ -798,32 +863,47 @@
         document.getElementById('bi-qtd-perdido').innerText = ocorrenciasGlobais['P'];
         document.getElementById('bi-med-perdido').innerText = (ocorrenciasGlobais['P'] / totalAlunosFiltro).toFixed(1);
 
-        let labelsEscolas = [];
-        let valoresCpodEscolas = [];
         let htmlEscolas = "";
+        let valoresCpodEscolas = [];
+        let labelsEscolas = [];
 
         for(let esc in analiseEscolas) {
-            const mediaEscola = analiseEscolas[esc].totalCpod / analiseEscolas[esc].contagem;
+            const mediaCpod = analiseEscolas[esc].totalCpod / analiseEscolas[esc].contagem;
+            const mediaCeod = analiseEscolas[esc].totalCeod / analiseEscolas[esc].contagem;
             labelsEscolas.push(esc);
-            valoresCpodEscolas.push(mediaEscola.toFixed(1));
+            valoresCpodEscolas.push(mediaCpod.toFixed(1));
 
-            const statusBadge = mediaEscola > 3.0 ? '<span class="alert-badge badge-high">ALTO RISCO</span>' : '<span class="alert-badge badge-low">CONTROLADO</span>';
-            htmlEscolas += `<tr><td style="text-align:left; font-weight:bold;">${esc}</td><td>${analiseEscolas[esc].contagem}</td><td>${mediaEscola.toFixed(1)}</td><td>${statusBadge}</td></tr>`;
+            const riscoMaximo = Math.max(mediaCpod, mediaCeod);
+            const statusBadge = riscoMaximo > 3.0 ? '<span class="alert-badge badge-high">ALTO RISCO</span>' : '<span class="alert-badge badge-low">CONTROLADO</span>';
+            
+            htmlEscolas += `<tr>
+                <td style="text-align:left; font-weight:bold;">${esc}</td>
+                <td>${analiseEscolas[esc].contagem}</td>
+                <td>CPO: ${mediaCpod.toFixed(1)} | <span style="color:var(--info)">CEO: ${mediaCeod.toFixed(1)}</span></td>
+                <td>${statusBadge}</td>
+            </tr>`;
         }
         document.getElementById('dash-escolas-body').innerHTML = htmlEscolas;
 
         let labelsIdades = [];
         let valoresCpodIdades = [];
+        let valoresCeodIdades = [];
         let htmlIdades = "";
 
         const idadesOrdenadas = Object.keys(analiseIdades).sort((a,b) => parseInt(a) - parseInt(b));
         
         idadesOrdenadas.forEach(idades => {
-            const mediaIdade = analiseIdades[idades].totalCpod / analiseIdades[idades].contagem;
+            const mediaCpodIdade = analiseIdades[idades].totalCpod / analiseIdades[idades].contagem;
+            const mediaCeodIdade = analiseIdades[idades].totalCeod / analiseIdades[idades].contagem;
             labelsIdades.push(idades);
-            valoresCpodIdades.push(mediaIdade.toFixed(1));
+            valoresCpodIdades.push(mediaCpodIdade.toFixed(1));
+            valoresCeodIdades.push(mediaCeodIdade.toFixed(1));
 
-            htmlIdades += `<tr><td style="font-weight:bold;">${idades}</td><td>${analiseIdades[idades].contagem}</td><td>${mediaIdade.toFixed(1)}</td></tr>`;
+            htmlIdades += `<tr>
+                <td style="font-weight:bold;">${idades}</td>
+                <td>${analiseIdades[idades].contagem}</td>
+                <td>CPO: ${mediaCpodIdade.toFixed(1)} | <span style="color:var(--info)">CEO: ${mediaCeodIdade.toFixed(1)}</span></td>
+            </tr>`;
         });
         document.getElementById('dash-etario-body').innerHTML = htmlIdades;
 
@@ -857,17 +937,37 @@
             type: 'line',
             data: {
                 labels: labelsIdades,
-                datasets: [{
-                    label: 'Índice CPO-D por Faixa Etária',
-                    data: valoresCpodIdades,
-                    borderColor: 'rgba(26, 37, 47, 1)',
-                    backgroundColor: 'rgba(26, 37, 47, 0.1)',
-                    borderWidth: 2,
-                    tension: 0.3,
-                    fill: true
-                }]
+                datasets: [
+                    {
+                        label: 'Índice CPO-D (Permanente)',
+                        data: valoresCpodIdades,
+                        borderColor: 'rgba(26, 37, 47, 1)',
+                        backgroundColor: 'rgba(26, 37, 47, 0.08)',
+                        borderWidth: 2,
+                        tension: 0.3,
+                        fill: true
+                    },
+                    {
+                        label: 'Índice CEO-D (Decíduo)',
+                        data: valoresCeodIdades,
+                        borderColor: 'rgba(52, 152, 219, 1)',
+                        backgroundColor: 'rgba(52, 152, 219, 0.08)',
+                        borderWidth: 2,
+                        tension: 0.3,
+                        fill: true
+                    }
+                ]
             },
-            options: { responsive: true, plugins: { legend: { display: true } }, scales: { y: { beginAtZero: true } } }
+            options: { 
+                responsive: true, 
+                plugins: { 
+                    legend: { 
+                        display: true,
+                        labels: { boxWidth: 20, font: { size: 10 } }
+                    } 
+                }, 
+                scales: { y: { beginAtZero: true } } 
+            }
         });
     }
 
@@ -876,9 +976,10 @@
     }
 
     function limparDashboardInformativo(mensagem) {
-        document.getElementById('dash-cpod-medio').innerText = "0.0";
+        document.getElementById('dash-cpod-medio').innerHTML = "CPO: 0.0<br>CEO: 0.0";
         document.getElementById('dash-prevalencia').innerText = "0%";
         document.getElementById('dash-total-fichas').innerText = "0";
+        document.getElementById('dash-prioridades-body').innerHTML = `<tr><td colspan="4" style="color:#7f8c8d; padding: 10px;">${mensagem}</td></tr>`;
         
         ['carie', 'obturado', 'trap', 'trar', 'ei', 'perdido'].forEach(id => {
             document.getElementById(`bi-qtd-${id}`).innerText = "0";
