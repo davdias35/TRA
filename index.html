@@ -863,8 +863,9 @@
         snapshot.forEach((docSnap) => {
             dadosLocaisMemoria.push({ id: docSnap.id, ...docSnap.data() });
         });
+        dadosFiltradosAtuais = [...dadosLocaisMemoria];
         atualizarSelectsDeBuscaHistorico(dadosLocaisMemoria);
-        filtrarHistoricoLocal();
+        window.filtrarHistoricoLocal();
         atualizarListasDeFiltros(dadosLocaisMemoria);
         processarDadosEpidemiologicos(dadosLocaisMemoria);
     });
@@ -941,17 +942,17 @@
         }
         let html = '';
         lista.forEach(item => {
-            const ind = calcularMultiplosIndices(item.det);
+            const ind = calcularMultiplosIndices(item.det || []);
             const dataFmt = item.d ? item.d.split('-').reverse().join('/') : 'S/D';
             html += `
                 <div class="card" onclick="visualizar('${item.id}')">
                     <div class="card-info">
                         <div style="font-weight:bold; font-size:11px; color:var(--primary);">${item.n || 'SEM NOME'}</div>
                         <div><b>Escola:</b> ${item.e || 'S/E'} | <b>Turma:</b> ${item.t || 'S/T'}</div>
-                        <div><b>Data:</b> ${dataFmt} | <b>Idade:</b> ${item.i} anos</div>
+                        <div><b>Data:</b> ${dataFmt} | <b>Idade:</b> ${item.i || 0} anos</div>
                         <div style="margin-top:2px; font-weight:bold; color:#2c3e50;">CPO-D: ${ind.cpod} | CEO-D: ${ind.ceod} | Total: ${ind.total}</div>
                     </div>
-                    <button class="btn-delete-card" onclick="apagarRegistroIndividual('${item.id}', '${item.n || 'Paciente'}', event)" title="Excluir ficha">🗑️</button>
+                    <button class="btn-delete-card" onclick="apagarRegistroIndividual('${item.id}', '${(item.n || 'Paciente').replace(/'/g, "\\'")}', event)" title="Excluir ficha">🗑️</button>
                 </div>
             `;
         });
@@ -960,7 +961,7 @@
 
     window.incrementarPagina = function() {
         limiteFichasExibidas += 15;
-        filtrarHistoricoLocal();
+        window.filtrarHistoricoLocal();
     }
 
     function atualizarListasDeFiltros(dados) {
@@ -1027,36 +1028,40 @@
         const chkEscTodas = document.getElementById('chk-esc-todas');
         const chkIdTodas = document.getElementById('chk-id-todas');
 
-        chkEscTodas.addEventListener('change', () => {
-            if(chkEscTodas.checked) {
-                dropEscola.querySelectorAll('.chk-escola').forEach(c => c.checked = false);
-                escolasSelecionadas = [];
-            }
-            atualizarLabelsEProcessar();
-        });
+        if (chkEscTodas) {
+            chkEscTodas.addEventListener('change', () => {
+                if(chkEscTodas.checked) {
+                    dropEscola.querySelectorAll('.chk-escola').forEach(c => c.checked = false);
+                    escolasSelecionadas = [];
+                }
+                atualizarLabelsEProcessar();
+            });
+        }
 
         dropEscola.querySelectorAll('.chk-escola').forEach(chk => {
             chk.addEventListener('change', () => {
-                if(chk.checked) chkEscTodas.checked = false;
+                if(chk.checked && chkEscTodas) chkEscTodas.checked = false;
                 escolasSelecionadas = Array.from(dropEscola.querySelectorAll('.chk-escola:checked')).map(c => c.value);
-                if(escolasSelecionadas.length === 0) chkEscTodas.checked = true;
+                if(escolasSelecionadas.length === 0 && chkEscTodas) chkEscTodas.checked = true;
                 atualizarLabelsEProcessar();
             });
         });
 
-        chkIdTodas.addEventListener('change', () => {
-            if(chkIdTodas.checked) {
-                dropIdade.querySelectorAll('.chk-idade').forEach(c => c.checked = false);
-                idadesSelecionadas = [];
-            }
-            atualizarLabelsEProcessar();
-        });
+        if (chkIdTodas) {
+            chkIdTodas.addEventListener('change', () => {
+                if(chkIdTodas.checked) {
+                    dropIdade.querySelectorAll('.chk-idade').forEach(c => c.checked = false);
+                    idadesSelecionadas = [];
+                }
+                atualizarLabelsEProcessar();
+            });
+        }
 
         dropIdade.querySelectorAll('.chk-idade').forEach(chk => {
             chk.addEventListener('change', () => {
-                if(chk.checked) chkIdTodas.checked = false;
+                if(chk.checked && chkIdTodas) chkIdTodas.checked = false;
                 idadesSelecionadas = Array.from(dropIdade.querySelectorAll('.chk-idade:checked')).map(c => parseInt(c.value));
-                if(idadesSelecionadas.length === 0) chkIdTodas.checked = true;
+                if(idadesSelecionadas.length === 0 && chkIdTodas) chkIdTodas.checked = true;
                 atualizarLabelsEProcessar();
             });
         });
@@ -1102,7 +1107,7 @@
         let ocorrenciasGlobais = { C: 0, O: 0, T: 0, R: 0, X: 0, P: 0 };
 
         dadosFiltrados.forEach(p => {
-            const indicesCalculados = calcularMultiplosIndices(p.det);
+            const indicesCalculados = calcularMultiplosIndices(p.det || []);
             totalCpodGeral += indicesCalculados.cpod; 
             totalCeodGeral += indicesCalculados.ceod;
             
@@ -1380,7 +1385,7 @@
         abrirModal("Cuidado: Exclusão Total na Nuvem", "Você tem certeza que deseja <b>apagar absolutamente todos os dados</b>?", async () => {
             const querySnapshot = await getDocs(colecaoPacientes);
             for (const docSnap of querySnapshot.docs) { await deleteDoc(doc(db, "pacientes", docSnap.id)); }
-            resetarApp();
+            window.resetarApp();
         });
     }
 
@@ -1397,7 +1402,7 @@
                 try {
                     await deleteDoc(doc(db, "pacientes", id));
                     alert("Ficha clínica removida com sucesso.");
-                    if(editandoId === id) resetarApp();
+                    if(editandoId === id) window.resetarApp();
                 } catch(erro) {
                     console.error(erro);
                     alert("Ocorreu um erro ao tentar excluir o registro do banco de dados.");
@@ -1444,7 +1449,7 @@
             el.setAttribute('data-status', ferramentaAtiva);
             el.setAttribute('class', `f-${ferramentaAtiva}`);
         }
-        atualizarCalculo();
+        window.atualizarCalculo();
     }
 
     function gerarDentes(container, registro = null) {
@@ -1460,7 +1465,7 @@
                 w.style.transform = 'translate(-50%, -50%)';
                 
                 let sMap = null;
-                if(registro) { sMap = {}; registro.det.filter(x => x.d == num).forEach(x => sMap[x.f] = x.s); }
+                if(registro && registro.det) { sMap = {}; registro.det.filter(x => x.d == num).forEach(x => sMap[x.f] = x.s); }
                 w.appendChild(criarDenteSVG(num, sMap));
                 const label = document.createElement('div'); label.className = 'tooth-label'; label.innerText = num;
                 w.onclick = () => {
@@ -1469,7 +1474,7 @@
                         face.setAttribute('data-status', ferramentaAtiva);
                         face.setAttribute('class', `f-${ferramentaAtiva}`);
                     });
-                    atualizarCalculo();
+                    window.atualizarCalculo();
                 };
                 w.appendChild(label);
                 container.appendChild(w);
@@ -1494,16 +1499,18 @@
         const dentesPermanentesAfetados = new Set();
         const dentesDeciduosAfetados = new Set();
         const simbolosPatologicos = ['C', 'O', 'T', 'R', 'X', 'P']; 
-        detalhes.forEach(item => {
-            const numDente = parseInt(item.d);
-            if (simbolosPatologicos.includes(item.s)) {
-                if (numDente >= 11 && numDente <= 48 && ![18,28,38,48].includes(numDente)) {
-                    dentesPermanentesAfetados.add(numDente);
-                } else if (numDente >= 51 && numDente <= 85) {
-                    dentesDeciduosAfetados.add(numDente);
+        if(detalhes) {
+            detalhes.forEach(item => {
+                const numDente = parseInt(item.d);
+                if (simbolosPatologicos.includes(item.s)) {
+                    if (numDente >= 11 && numDente <= 48 && ![18,28,38,48].includes(numDente)) {
+                        dentesPermanentesAfetados.add(numDente);
+                    } else if (numDente >= 51 && numDente <= 85) {
+                        dentesDeciduosAfetados.add(numDente);
+                    }
                 }
-            }
-        });
+            });
+        }
         const cpod = dentesPermanentesAfetados.size;
         const ceod = dentesDeciduosAfetados.size;
         return { cpod: cpod, ceod: ceod, total: cpod + ceod };
@@ -1542,12 +1549,12 @@
         if(editandoId) {
             const registroAntigo = dadosLocaisMemoria.find(x => x.id === editandoId);
             if(registroAntigo && registroAntigo.n === n && registroAntigo.nasc !== nascInput) {
-                addDoc(colecaoPacientes, r).then(() => resetarApp()).catch(() => alert("Erro ao salvar evolução histórica."));
+                addDoc(colecaoPacientes, r).then(() => window.resetarApp()).catch(() => alert("Erro ao salvar evolução histórica."));
             } else {
-                updateDoc(doc(db, "pacientes", editandoId), r).then(() => resetarApp()).catch(() => alert("Erro ao atualizar dados na nuvem."));
+                updateDoc(doc(db, "pacientes", editandoId), r).then(() => window.resetarApp()).catch(() => alert("Erro ao atualizar dados na nuvem."));
             }
         } else {
-            addDoc(colecaoPacientes, r).then(() => resetarApp()).catch(() => alert("Erro ao salvar na nuvem."));
+            addDoc(colecaoPacientes, r).then(() => window.resetarApp()).catch(() => alert("Erro ao salvar na nuvem."));
         }
     }
 
@@ -1556,10 +1563,12 @@
         editandoId = id; 
         document.getElementById('aviso-edicao').style.display = 'block';
         document.getElementById('btn-pdf').style.display = 'block';
-        document.getElementById('nome').value = r.n; document.getElementById('escola').value = r.e;
-        document.getElementById('turma').value = r.t;
+        document.getElementById('nome').value = r.n || ''; 
+        document.getElementById('escola').value = r.e || '';
+        document.getElementById('turma').value = r.t || '';
         document.getElementById('data_nascimento').value = r.nasc || "";
-        document.getElementById('idade').value = r.i; document.getElementById('data_exame').value = r.d;
+        document.getElementById('idade').value = r.i || ''; 
+        document.getElementById('data_exame').value = r.d || '';
         gerarDentes(box, r); 
         window.atualizarCalculo(); 
         const evolucoesDoPaciente = dadosLocaisMemoria.filter(x => x.n === r.n).sort((a,b) => parseFloat(a.i) - parseFloat(b.i));
@@ -1569,7 +1578,8 @@
             timelineContainer.style.display = 'block';
             badgesList.innerHTML = evolucoesDoPaciente.map(evo => {
                 const classeAtivo = evo.id === id ? 'active' : '';
-                return `<div class="timeline-badge ${classeAtivo}" onclick="event.stopPropagation(); visualizar('${evo.id}')">👶 ${evo.i} anos (${evo.d.split('-').reverse().slice(0,2).join('/')})</div>`;
+                const dataFormatada = evo.d ? evo.d.split('-').reverse().slice(0,2).join('/') : '';
+                return `<div class="timeline-badge ${classeAtivo}" onclick="event.stopPropagation(); visualizar('${evo.id}')">👶 ${evo.i} anos (${dataFormatada})</div>`;
             }).join('');
         } else {
             timelineContainer.style.display = 'none';
@@ -1647,8 +1657,16 @@
             return;
         }
         const area = document.getElementById('print-area'); area.innerHTML = '';
-        dadosFiltradosAtuais.forEach(r => {
-            const ind = calcularMultiplosIndices(r.det);
+        
+        // Ordena os registros em ordem alfabética pelo nome do paciente
+        const registrosOrdenados = [...dadosFiltradosAtuais].sort((a, b) => {
+            const nomeA = (a.n || '').trim();
+            const nomeB = (b.n || '').trim();
+            return nomeA.localeCompare(nomeB, 'pt-BR', { sensitivity: 'base' });
+        });
+
+        registrosOrdenados.forEach(r => {
+            const ind = calcularMultiplosIndices(r.det || []);
             const item = document.createElement('div'); item.className = 'print-item';
             item.innerHTML = `
                 <div class="print-card-header">
@@ -1666,7 +1684,7 @@
                             <div><b>Paciente:</b> ${(r.n || '').toUpperCase()}</div>
                             <div><b>Escola:</b> ${(r.e || '').toUpperCase()}</div>
                             <div><b>Turma:</b> ${(r.t || '').toUpperCase()}</div>
-                            <div><b>Idade:</b> ${r.i} anos</div>
+                            <div><b>Idade:</b> ${r.i || 0} anos</div>
                             <div><b>Data:</b> ${r.d ? r.d.split('-').reverse().join('/') : ''}</div>
                             <div><b>Avaliador:</b> ${r.a || 'NÃO INFORMADO'}</div>
                         </div>
@@ -1702,8 +1720,8 @@
     window.exportarCSV = function() {
         let csv = "Data_Exame;Paciente;Nascimento;Idade_Anos;Escola;Avaliador;CPO-D;CEO-D;Indice_Total\n";
         dadosFiltradosAtuais.forEach(p => {
-            const ind = calcularMultiplosIndices(p.det);
-            csv += `${p.d};${p.n};${p.nasc || ''};${p.i};${p.e};${p.a};${ind.cpod};${ind.ceod};${ind.total}\n`;
+            const ind = calcularMultiplosIndices(p.det || []);
+            csv += `${p.d || ''};${p.n || ''};${p.nasc || ''};${p.i || ''};${p.e || ''};${p.a || ''};${ind.cpod};${ind.ceod};${ind.total}\n`;
         });
         const blob = new Blob(["\ufeff"+csv], {type:'text/csv'});
         const a = document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='CPO_CEO_Filtrados.csv'; a.click();
