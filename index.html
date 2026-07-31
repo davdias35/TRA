@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="pt-br">
 <head>
@@ -56,7 +55,7 @@
         .timeline-badge { background: #e2e8f0; color: #475569; padding: 4px 8px; border-radius: 20px; font-size: 10px; font-weight: bold; cursor: pointer; white-space: nowrap; border: 1px solid transparent; }
         .timeline-badge.active { background: var(--info); color: white; border-color: #2980b9; }
 
-        /* LAYOUT DE IMPRESSÃO OTIMIZADO PARA EVITAR SOBREPOSIÇÕES E CORTES */
+        /* LAYOUT DE IMPRESSÃO OTIMIZADO */
         .print-brand-header, .print-brand-footer { display: none; }
         
         @media print {
@@ -70,14 +69,13 @@
             
             #print-area { display: block !important; width: 100%; padding-top: 0; }
             
-            /* Novo layout de ficha impressa de alta densidade: projetado para caber 3 por página perfeitamente */
             .print-item { 
                 page-break-inside: avoid; 
                 border: 1.5px solid #1a252f;
                 border-radius: 8px;
                 padding: 10px; 
                 margin-bottom: 12px;
-                height: 260px; /* Altura máxima estrita para garantir exatamente 3 por folha A4 */
+                height: 260px;
                 display: flex; 
                 flex-direction: column; 
                 justify-content: space-between;
@@ -111,7 +109,6 @@
                 overflow: hidden;
             }
 
-            /* Coluna 1: Informações e Índices */
             .print-col-info {
                 width: 38%;
                 display: flex;
@@ -172,7 +169,6 @@
                 margin-left: 4px;
             }
 
-            /* Coluna 2: Odontograma Compacto */
             .print-col-odontograma {
                 width: 42%;
                 display: flex;
@@ -181,14 +177,13 @@
                 position: relative;
             }
             .print-odontograma { 
-                zoom: 0.50; /* Reduzido de forma inteligente para caber perfeitamente no cartão de 260px */
+                zoom: 0.50; 
                 position: relative; 
                 width: 420px; 
                 height: 420px; 
                 flex-shrink: 0;
             }
 
-            /* Coluna 3: Legenda */
             .print-col-legend {
                 width: 20%;
                 display: flex;
@@ -263,10 +258,10 @@
         .header h3 { margin: 0; font-size: 14px; color: var(--primary); }
         .form-grid { display: grid; gap: 6px; margin-bottom: 10px; }
         .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+        .form-row-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6px; }
         input, select { padding: 8px; border-radius: 6px; border: 1px solid #bdc3c7; font-size: 11px; width: 100%; box-sizing: border-box; background: white; }
         .label-pequeno { font-size: 9px; font-weight: bold; color: #64748b; margin-bottom: 1px; display: block; text-transform: uppercase; }
         
-        /* LINHA DE ÍNDICES DIVIDIDA NA TELA INICIAL */
         .cpod-display { display: none; background: #f8f9fa; border: 1px dashed var(--primary); border-radius: 8px; padding: 6px; margin-bottom: 10px; }
         .cpod-grid-layout { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 4px; text-align: center; }
         .cpod-item-col { border-right: 1px dashed #cbd5e1; }
@@ -337,7 +332,6 @@
         .btn-export { background: var(--primary); margin-top: 10px; width: 100%; }
         .btn-danger { background: #e67e22; margin-top: 10px; width: 100%; }
         
-        /* HISTÓRICO CONTAINER E FILTROS COMPACTOS */
         #historico { margin-top: 12px; border-top: 2px solid #eee; padding-top: 8px; width: 100%; }
         .hist-search-box { background: #f8fafc; border: 1px solid #e2e8f0; padding: 6px; border-radius: 10px; margin-bottom: 8px; display: grid; gap: 4px; }
         .hist-search-row { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; }
@@ -401,7 +395,6 @@
 
         .risco-container { max-height: 200px; overflow-y: auto; border: 1px solid #e2e8f0; border-radius: 8px; margin-top: 6px; background: #fff; }
     
-        /* IDENTIDADE VISUAL EPIDENT */
         .epident-logo-svg { display: block; width: 100%; height: auto; }
         .epident-mark { width: 28px; height: 28px; flex-shrink: 0; }
         .epident-brand-header {
@@ -415,7 +408,6 @@
         .epident-brand-header .brand-title .accent { color: #3498db; }
         .epident-brand-header .brand-sub { font-size: 9px; letter-spacing: 3px; color: #bfd4e4; font-weight: 600; margin-top: 3px; text-transform: uppercase; }
         
-        /* IDENTIDADE VISUAL PARA RELATÓRIO DO DASHBOARD MUNICIPAL */
         .print-dash-header {
             display: flex; align-items: center; gap: 10px;
             padding: 10px 12px; margin-bottom: 12px;
@@ -437,8 +429,6 @@
     </style>
 </head>
 <body>
-
-<!-- Cabeçalho / rodapé de marca (não necessário com os novos cartões de relatório flexíveis) -->
 
 <div id="login-overlay">
     <div class="login-box">
@@ -506,17 +496,20 @@
             <input type="text" id="nome" placeholder="Paciente">
             <input type="text" id="turma" placeholder="Turma">
         </div>
-        <div class="form-row">
+        <div class="form-row-3">
             <div>
                 <label class="label-pequeno">Nascimento:</label>
                 <input type="date" id="data_nascimento" onchange="calcularIdadeAutomatica(); atualizarCalculo();">
+            </div>
+            <div>
+                <label class="label-pequeno">Idade (Anos):</label>
+                <input type="number" step="0.1" id="idade" placeholder="Ex: 8" oninput="estimarNascimentoPelaIdade()">
             </div>
             <div>
                 <label class="label-pequeno">Data Exame:</label>
                 <input type="date" id="data_exame">
             </div>
         </div>
-        <input type="hidden" id="idade">
     </div>
 
     <div id="paciente-timeline" class="timeline-container">
@@ -596,7 +589,6 @@
 </div>
 
 <div class="dashboard-container">
-    <!-- Cabeçalho de Identidade Visual para Impressão e Visualização -->
     <div class="print-dash-header">
         <svg class="print-dash-mark" xmlns="http://www.w3.org/2000/svg" viewBox="60 40 300 310" aria-hidden="true">
           <g transform="translate(60,40)">
@@ -746,6 +738,7 @@
     let dadosLocaisMemoria = []; 
     let dadosFiltradosAtuais = []; 
     let ferramentaAtiva = "H"; 
+    let usuarioAtual = { nome: "", matricula: "" };
 
     let escolasSelecionadas = [];
     let idadesSelecionadas = [];
@@ -754,10 +747,17 @@
     let chartIdadesInstance = null;
     let limiteFichasExibidas = 15;
 
+    // Garante data do exame no dia de hoje caso o usuário não escolha
+    document.addEventListener("DOMContentLoaded", () => {
+        if(!document.getElementById('data_exame').value) {
+            document.getElementById('data_exame').value = new Date().toISOString().split('T')[0];
+        }
+    });
+
     window.calcularIdadeAutomatica = function() {
         const nascInput = document.getElementById('data_nascimento').value;
-        const examenInput = document.getElementById('data_exame').value;
-        if (!nascInput || !examenInput) return;
+        const examenInput = document.getElementById('data_exame').value || new Date().toISOString().split('T')[0];
+        if (!nascInput) return;
         const nascimento = new Date(nascInput);
         const exame = new Date(examenInput);
         let diferencaAnos = (exame - nascimento) / (1000 * 60 * 60 * 24 * 365.25);
@@ -765,8 +765,28 @@
         document.getElementById('idade').value = diferencaAnos.toFixed(1);
     }
 
+    // Calcula uma Data de Nascimento aproximada quando o usuário escolhe digitar a idade diretamente
+    window.estimarNascimentoPelaIdade = function() {
+        const valIdade = parseFloat(document.getElementById('idade').value);
+        const examenInput = document.getElementById('data_exame').value || new Date().toISOString().split('T')[0];
+        if (isNaN(valIdade) || valIdade <= 0) return;
+        
+        const dataExame = new Date(examenInput);
+        dataExame.setFullYear(dataExame.getFullYear() - Math.floor(valIdade));
+        const mesRestante = Math.round((valIdade % 1) * 12);
+        if (mesRestante > 0) {
+            dataExame.setMonth(dataExame.getMonth() - mesRestante);
+        }
+        document.getElementById('data_nascimento').value = dataExame.toISOString().split('T')[0];
+        window.atualizarCalculo();
+    }
+
     document.getElementById('data_exame').addEventListener('change', () => {
-        window.calcularIdadeAutomatica();
+        if(document.getElementById('data_nascimento').value) {
+            window.calcularIdadeAutomatica();
+        } else if(document.getElementById('idade').value) {
+            window.estimarNascimentoPelaIdade();
+        }
         window.atualizarCalculo();
     });
 
@@ -804,6 +824,7 @@
             document.getElementById('login-overlay').style.display = "flex";
         }
     }
+    verificarSessaoUsuario();
 
     document.querySelectorAll('.tool-btn').forEach(btn => {
         btn.onclick = () => {
@@ -833,6 +854,8 @@
         { d: [55,54,53,52,51], start: 190, end: 260, r: 0.28 }, { d: [61,62,63,64,65], start: 280, end: 350, r: 0.28 },
         { d: [75,74,73,72,71], start: 10, end: 80, r: 0.28 }, { d: [81,82,83,84,85], start: 100, end: 170, r: 0.28 }
     ];
+
+    gerarDentes(box);
 
     const q = query(colecaoPacientes, orderBy("criadoEm", "desc"));
     onSnapshot(q, (snapshot) => {
@@ -908,6 +931,31 @@
             btnMassa.innerText = `📄 PDF de Todos da Nuvem (${dadosLocaisMemoria.length})`;
             btnMassa.style.background = "#8e44ad";
         }
+    }
+
+    function renderCards(lista) {
+        const container = document.getElementById('lista-cards');
+        if(!lista || lista.length === 0) {
+            container.innerHTML = '<div style="font-size:11px; color:#7f8c8d; text-align:center; padding:10px;">Nenhum registro encontrado.</div>';
+            return;
+        }
+        let html = '';
+        lista.forEach(item => {
+            const ind = calcularMultiplosIndices(item.det);
+            const dataFmt = item.d ? item.d.split('-').reverse().join('/') : 'S/D';
+            html += `
+                <div class="card" onclick="visualizar('${item.id}')">
+                    <div class="card-info">
+                        <div style="font-weight:bold; font-size:11px; color:var(--primary);">${item.n || 'SEM NOME'}</div>
+                        <div><b>Escola:</b> ${item.e || 'S/E'} | <b>Turma:</b> ${item.t || 'S/T'}</div>
+                        <div><b>Data:</b> ${dataFmt} | <b>Idade:</b> ${item.i} anos</div>
+                        <div style="margin-top:2px; font-weight:bold; color:#2c3e50;">CPO-D: ${ind.cpod} | CEO-D: ${ind.ceod} | Total: ${ind.total}</div>
+                    </div>
+                    <button class="btn-delete-card" onclick="apagarRegistroIndividual('${item.id}', '${item.n || 'Paciente'}', event)" title="Excluir ficha">🗑️</button>
+                </div>
+            `;
+        });
+        container.innerHTML = html;
     }
 
     window.incrementarPagina = function() {
@@ -1107,7 +1155,6 @@
         document.getElementById('dash-prevalencia').innerText = Math.round((pacientesComCarie / totalAlunosFiltro) * 100) + "%";
         document.getElementById('dash-total-fichas').innerText = totalAlunosFiltro;
 
-        // Atualizar informações do cabeçalho de impressão com data e filtros ativos
         const dataHoje = new Date().toLocaleDateString('pt-BR');
         let descEscolas = "Todas as Escolas";
         if (escolasSelecionadas.length > 0) {
@@ -1278,10 +1325,6 @@
     document.getElementById('btn-print-dash').onclick = function() {
         document.body.classList.add('print-dashboard-mode');
         window.print();
-        // No Android o processamento do print do WebView é assíncrono.
-        // Removemos o timeout rápido de 1.2s para garantir que o spooler de impressão termine
-        // de capturar o layout correto. Deixamos um timeout de 20s para segurança de estado,
-        // além de escutar o evento afterprint.
         setTimeout(() => {
             document.body.classList.remove('print-dashboard-mode');
         }, 20000);
@@ -1468,7 +1511,18 @@
 
     window.salvar = function() {
         const n = document.getElementById('nome').value.toUpperCase().trim(); if(!n) return alert("Nome do Paciente pendente.");
-        const nascInput = document.getElementById('data_nascimento').value; if(!nascInput) return alert("Data de Nascimento pendente.");
+        
+        let nascInput = document.getElementById('data_nascimento').value; 
+        let valIdade = document.getElementById('idade').value;
+        
+        if(!valIdade) return alert("Idade do Paciente pendente.");
+        
+        // Se não houver nascimento informado, gera a estimativa a partir da idade
+        if(!nascInput) {
+            window.estimarNascimentoPelaIdade();
+            nascInput = document.getElementById('data_nascimento').value;
+        }
+
         let det = [];
         document.querySelectorAll('#odontograma .tooth').forEach(t => {
             const num = t.id.replace('t-','');
@@ -1479,9 +1533,9 @@
             e: document.getElementById('escola').value.toUpperCase(), 
             a: `${usuarioAtual.nome} (${usuarioAtual.matricula})`, 
             t: document.getElementById('turma').value, 
-            i: document.getElementById('idade').value, 
+            i: valIdade, 
             nasc: nascInput,
-            d: document.getElementById('data_exame').value, 
+            d: document.getElementById('data_exame').value || new Date().toISOString().split('T')[0], 
             det, 
             criadoEm: new Date().getTime()
         };
@@ -1549,7 +1603,6 @@
                 </div>
             </div>
             <div class="print-body-grid">
-                <!-- Coluna 1: Informações do Paciente e Índices -->
                 <div class="print-col-info">
                     <div class="print-details-box">
                         <div><b>Paciente:</b> ${(document.getElementById('nome').value || '').toUpperCase()}</div>
@@ -1566,12 +1619,10 @@
                     </div>
                 </div>
                 
-                <!-- Coluna 2: Odontograma -->
                 <div class="print-col-odontograma">
                     <div class="print-odontograma"></div>
                 </div>
                 
-                <!-- Coluna 3: Legenda compacta -->
                 <div class="print-col-legend">
                     <div class="print-legend-title">Legenda</div>
                     <div class="print-legend-grid">
@@ -1610,7 +1661,6 @@
                     </div>
                 </div>
                 <div class="print-body-grid">
-                    <!-- Coluna 1: Informações do Paciente e Índices -->
                     <div class="print-col-info">
                         <div class="print-details-box">
                             <div><b>Paciente:</b> ${(r.n || '').toUpperCase()}</div>
@@ -1627,12 +1677,10 @@
                         </div>
                     </div>
                     
-                    <!-- Coluna 2: Odontograma -->
                     <div class="print-col-odontograma">
                         <div class="print-odontograma"></div>
                     </div>
                     
-                    <!-- Coluna 3: Legenda compacta -->
                     <div class="print-col-legend">
                         <div class="print-legend-title">Legenda</div>
                         <div class="print-legend-grid">
@@ -1664,59 +1712,13 @@
     window.resetarApp = function() {
         editandoId = null; document.getElementById('aviso-edicao').style.display = 'none';
         document.getElementById('btn-pdf').style.display = 'none'; document.getElementById('cpod-box').style.display = 'none';
+        document.getElementById('nome').value = ''; document.getElementById('escola').value = '';
+        document.getElementById('turma').value = ''; document.getElementById('data_nascimento').value = '';
+        document.getElementById('idade').value = ''; 
+        document.getElementById('data_exame').value = new Date().toISOString().split('T')[0];
         document.getElementById('paciente-timeline').style.display = 'none';
-        document.querySelectorAll('input').forEach(i => i.id !== 'data_exame' && i.id !== 'escola' && i.id !== 'login-nome' && i.id !== 'login-matricula' && (i.value = ""));
-        document.getElementById('data_exame').valueAsDate = new Date();
-        document.querySelectorAll('.tool-btn').forEach(b => b.classList.remove('active'));
-        document.querySelector('[data-tool="H"]').classList.add('active');
-        ferramentaAtiva = "H";
-        limiteFichasExibidas = 15;
-        document.getElementById('search-hist-nome').value = "";
-        document.getElementById('search-hist-escola').value = "";
-        document.getElementById('search-hist-turma').value = "";
-        document.getElementById('search-hist-data').value = ""; 
-        document.getElementById('search-hist-condicao').value = "";
-        gerarDentes(box); 
-        filtrarHistoricoLocal();
+        gerarDentes(box);
     }
-
-    function renderCards(dados) {
-        const pacientesUnicosProcessados = new Set();
-        const listaFiltradaUnica = [];
-        dados.forEach(item => {
-            if(!pacientesUnicosProcessados.has(item.n)) {
-                pacientesUnicosProcessados.add(item.n);
-                listaFiltradaUnica.push(item);
-            }
-        });
-
-        document.getElementById('lista-cards').innerHTML = listaFiltradaUnica.map(p => {
-            const totalEvolucoes = dadosLocaisMemoria.filter(x => x.n === p.n).length;
-            const badgeCount = totalEvolucoes > 1 ? `<span style="background:#8e44ad; color:white; padding:1px 5px; border-radius:10px; font-size:9px; font-weight:bold; margin-left:5px;">${totalEvolucoes} avaliações</span>` : '';
-            return `
-            <div class="card" onclick="visualizar('${p.id}')">
-                <div class="card-info">
-                    <b>${p.n}</b> ${badgeCount}<br>
-                    Última Unidade: ${p.e || 'S/E'} ${p.t ? '['+p.t+']' : ''}<br>
-                    <small style="color:#7f8c8d">Nascimento: ${p.nasc ? p.nasc.split('-').reverse().join('/') : 'Não inf.'} | Idade Base: ${p.i} anos | Avaliador: ${p.a || 'Não registrado'}</small>
-                </div>
-                <button class="btn-delete-card" onclick="apagarRegistroIndividual('${p.id}', '${p.n}', event)" title="Excluir ficha permanentemente">🗑️</button>
-            </div>`}).join('');
-    }
-
-    var usuarioAtual = { nome: sessionStorage.getItem('usuario_nome') || "", matricula: sessionStorage.getItem('usuario_matricula') || "" };
-    verificarSessaoUsuario();
-    resetarApp();
-</script>
-
-<script>
-  (function(){
-    var el = document.getElementById('pbh-date');
-    if (el) {
-      var d = new Date();
-      el.textContent = d.toLocaleDateString('pt-BR');
-    }
-  })();
 </script>
 </body>
 </html>
