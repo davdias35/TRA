@@ -75,7 +75,7 @@
                 border-radius: 8px;
                 padding: 10px; 
                 margin-bottom: 12px;
-                height: 260px;
+                min-height: 260px;
                 display: flex; 
                 flex-direction: column; 
                 justify-content: space-between;
@@ -105,7 +105,6 @@
                 align-items: stretch;
                 flex-grow: 1;
                 gap: 10px;
-                height: calc(100% - 28px);
                 overflow: hidden;
             }
 
@@ -113,7 +112,7 @@
                 width: 38%;
                 display: flex;
                 flex-direction: column;
-                justify-content: space-between;
+                justify-content: flex-start;
                 gap: 6px;
             }
             .print-details-box {
@@ -130,6 +129,25 @@
                 white-space: nowrap;
                 overflow: hidden;
             }
+            .print-obs-box {
+                font-size: 8.5px;
+                line-height: 1.3;
+                color: #334155;
+                background: #fffbe6 !important;
+                border: 1px solid #ffe58f;
+                border-radius: 6px;
+                padding: 6px 8px;
+                word-wrap: break-word;
+            }
+            .print-obs-title {
+                font-weight: 800;
+                color: #d48806;
+                text-transform: uppercase;
+                font-size: 8px;
+                margin-bottom: 2px;
+                border-bottom: 1px dashed #ffe58f;
+                padding-bottom: 1px;
+            }
             .print-indices-box {
                 background: #1a252f !important;
                 color: #ffffff !important;
@@ -139,6 +157,7 @@
                 grid-template-columns: 1fr 1fr;
                 gap: 4px;
                 align-items: center;
+                margin-top: auto;
             }
             .pi-item {
                 font-size: 8px;
@@ -259,7 +278,8 @@
         .form-grid { display: grid; gap: 6px; margin-bottom: 10px; }
         .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
         .form-row-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6px; }
-        input, select { padding: 8px; border-radius: 6px; border: 1px solid #bdc3c7; font-size: 11px; width: 100%; box-sizing: border-box; background: white; }
+        input, select, textarea { padding: 8px; border-radius: 6px; border: 1px solid #bdc3c7; font-size: 11px; width: 100%; box-sizing: border-box; background: white; font-family: inherit; }
+        textarea { resize: vertical; min-height: 45px; }
         .label-pequeno { font-size: 9px; font-weight: bold; color: #64748b; margin-bottom: 1px; display: block; text-transform: uppercase; }
         
         .cpod-display { display: none; background: #f8f9fa; border: 1px dashed var(--primary); border-radius: 8px; padding: 6px; margin-bottom: 10px; }
@@ -510,6 +530,10 @@
                 <input type="date" id="data_exame">
             </div>
         </div>
+        <div>
+            <label class="label-pequeno">Observações / Particularidades:</label>
+            <textarea id="observacao" placeholder="Ex: Alergias, condições sistêmicas, hábitos, cooperação durante exame..."></textarea>
+        </div>
     </div>
 
     <div id="paciente-timeline" class="timeline-container">
@@ -747,7 +771,6 @@
     let chartIdadesInstance = null;
     let limiteFichasExibidas = 15;
 
-    // Garante data do exame no dia de hoje caso o usuário não escolha
     document.addEventListener("DOMContentLoaded", () => {
         if(!document.getElementById('data_exame').value) {
             document.getElementById('data_exame').value = new Date().toISOString().split('T')[0];
@@ -765,7 +788,6 @@
         document.getElementById('idade').value = diferencaAnos.toFixed(1);
     }
 
-    // Calcula uma Data de Nascimento aproximada quando o usuário escolhe digitar a idade diretamente
     window.estimarNascimentoPelaIdade = function() {
         const valIdade = parseFloat(document.getElementById('idade').value);
         const examenInput = document.getElementById('data_exame').value || new Date().toISOString().split('T')[0];
@@ -1516,15 +1538,31 @@
         return { cpod: cpod, ceod: ceod, total: cpod + ceod };
     }
 
+    window.resetarApp = function() {
+        editandoId = null;
+        document.getElementById('aviso-edicao').style.display = 'none';
+        document.getElementById('btn-pdf').style.display = 'none';
+        document.getElementById('nome').value = '';
+        document.getElementById('escola').value = '';
+        document.getElementById('turma').value = '';
+        document.getElementById('data_nascimento').value = '';
+        document.getElementById('idade').value = '';
+        document.getElementById('observacao').value = '';
+        document.getElementById('data_exame').value = new Date().toISOString().split('T')[0];
+        document.getElementById('paciente-timeline').style.display = 'none';
+        gerarDentes(box);
+        window.atualizarCalculo();
+    }
+
     window.salvar = function() {
         const n = document.getElementById('nome').value.toUpperCase().trim(); if(!n) return alert("Nome do Paciente pendente.");
         
         let nascInput = document.getElementById('data_nascimento').value; 
         let valIdade = document.getElementById('idade').value;
+        const obsInput = document.getElementById('observacao').value.trim();
         
         if(!valIdade) return alert("Idade do Paciente pendente.");
         
-        // Se não houver nascimento informado, gera a estimativa a partir da idade
         if(!nascInput) {
             window.estimarNascimentoPelaIdade();
             nascInput = document.getElementById('data_nascimento').value;
@@ -1542,6 +1580,7 @@
             t: document.getElementById('turma').value, 
             i: valIdade, 
             nasc: nascInput,
+            obs: obsInput,
             d: document.getElementById('data_exame').value || new Date().toISOString().split('T')[0], 
             det, 
             criadoEm: new Date().getTime()
@@ -1569,6 +1608,7 @@
         document.getElementById('data_nascimento').value = r.nasc || "";
         document.getElementById('idade').value = r.i || ''; 
         document.getElementById('data_exame').value = r.d || '';
+        document.getElementById('observacao').value = r.obs || '';
         gerarDentes(box, r); 
         window.atualizarCalculo(); 
         const evolucoesDoPaciente = dadosLocaisMemoria.filter(x => x.n === r.n).sort((a,b) => parseFloat(a.i) - parseFloat(b.i));
@@ -1587,6 +1627,68 @@
         window.scrollTo(0,0);
     }
 
+    function construirHtmlPrintCard(r, detAtual) {
+        const ind = calcularMultiplosIndices(detAtual);
+        const dataFmt = r.d ? r.d.split('-').reverse().join('/') : 'S/D';
+        const nascFmt = r.nasc ? r.nasc.split('-').reverse().join('/') : 'S/D';
+        const obsHtml = r.obs ? `
+            <div class="print-obs-box">
+                <div class="print-obs-title">📌 Observações / Particularidades</div>
+                <div>${r.obs.replace(/\n/g, '<br>')}</div>
+            </div>
+        ` : '';
+
+        const tempContainer = document.createElement('div');
+        tempContainer.style.width = '420px';
+        tempContainer.style.height = '420px';
+        tempContainer.className = 'print-odontograma';
+        gerarDentes(tempContainer, r);
+
+        return `
+            <div class="print-item">
+                <div class="print-card-header">
+                    <div style="display:flex; align-items:center;">
+                        <span class="pch-brand">epi<span class="pch-accent">dent</span></span>
+                        <span class="pch-sub">| Monitoramento Epidemiológico</span>
+                    </div>
+                    <div class="pch-right">Data Exame: ${dataFmt}</div>
+                </div>
+                <div class="print-body-grid">
+                    <div class="print-col-info">
+                        <div class="print-details-box">
+                            <div><b>PACIENTE:</b> ${r.n || 'NÃO INFORMADO'}</div>
+                            <div><b>ESCOLA:</b> ${r.e || 'NÃO INFORMADA'}</div>
+                            <div><b>TURMA:</b> ${r.t || 'NÃO INFORMADA'}</div>
+                            <div><b>IDADE:</b> ${r.i || 0} anos | <b>NASC:</b> ${nascFmt}</div>
+                            <div><b>AVALIADOR:</b> ${r.a || 'Dr. Davi Dias'}</div>
+                        </div>
+                        ${obsHtml}
+                        <div class="print-indices-box">
+                            <div class="pi-item">CPO-D (Perm.) <b>${ind.cpod}</b></div>
+                            <div class="pi-item">CEO-D (Decíd.) <b>${ind.ceod}</b></div>
+                            <div class="pi-item pi-item-total">ÍNDICE TOTAL CPOD+CEOD: <b>${ind.total}</b></div>
+                        </div>
+                    </div>
+                    <div class="print-col-odontograma">
+                        ${tempContainer.outerHTML}
+                    </div>
+                    <div class="print-col-legend">
+                        <div class="print-legend-title">Legenda</div>
+                        <div class="print-legend-grid">
+                            <div class="print-legend-item"><div class="print-box" style="background:#fff;"></div>Hígido (H)</div>
+                            <div class="print-legend-item"><div class="print-box" style="background:var(--accent);"></div>Cárie (C)</div>
+                            <div class="print-legend-item"><div class="print-box" style="background:var(--info);"></div>Obturado (O)</div>
+                            <div class="print-legend-item"><div class="print-box" style="background:#fff; border: 2px solid var(--tra-plan);"></div>TRA Plan. (T)</div>
+                            <div class="print-legend-item"><div class="print-box" style="background:var(--tra-done);"></div>TRA Real. (R)</div>
+                            <div class="print-legend-item"><div class="print-box" style="background:#ffcccc; border:1px solid red;"></div>E.I. (X)</div>
+                            <div class="print-legend-item"><div class="print-box" style="background:var(--lost);"></div>Perdido (P)</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+
     window.gerarPdfIndividual = function() {
         document.body.classList.remove('print-dashboard-mode');
         if (!editandoId) {
@@ -1594,148 +1696,68 @@
             return;
         }
         const r = dadosLocaisMemoria.find(x => x.id === editandoId); if (!r) return;
+        r.obs = document.getElementById('observacao').value.trim();
         let detAtual = [];
         document.querySelectorAll('#odontograma .tooth').forEach(t => {
             const num = t.id.replace('t-','');
             t.querySelectorAll('[data-status]').forEach(f => detAtual.push({ d: parseInt(num), s: f.getAttribute('data-status') }));
         });
-        const ind = calcularMultiplosIndices(detAtual);
-        const area = document.getElementById('print-area'); area.innerHTML = ''; 
-        const item = document.createElement('div'); item.className = 'print-item';
-        item.innerHTML = `
-            <div class="print-card-header">
-                <div class="pch-left">
-                    <span class="pch-brand">epi<span class="pch-accent">dent</span></span>
-                    <span class="pch-sub">· Monitoramento Epidemiológico</span>
-                </div>
-                <div class="pch-right">
-                    Ficha de Avaliação Individual
-                </div>
-            </div>
-            <div class="print-body-grid">
-                <div class="print-col-info">
-                    <div class="print-details-box">
-                        <div><b>Paciente:</b> ${(document.getElementById('nome').value || '').toUpperCase()}</div>
-                        <div><b>Escola:</b> ${(document.getElementById('escola').value || '').toUpperCase()}</div>
-                        <div><b>Turma:</b> ${(document.getElementById('turma').value || '').toUpperCase()}</div>
-                        <div><b>Idade:</b> ${document.getElementById('idade').value} anos</div>
-                        <div><b>Data:</b> ${(document.getElementById('data_exame').value || '').split('-').reverse().join('/')}</div>
-                        <div><b>Avaliador:</b> ${r.a || usuarioAtual.nome}</div>
-                    </div>
-                    <div class="print-indices-box">
-                        <div class="pi-item">CPO-D <b>${ind.cpod}</b></div>
-                        <div class="pi-item">CEO-D <b>${ind.ceod}</b></div>
-                        <div class="pi-item-total">TOTAL <b>${ind.total}</b></div>
-                    </div>
-                </div>
-                
-                <div class="print-col-odontograma">
-                    <div class="print-odontograma"></div>
-                </div>
-                
-                <div class="print-col-legend">
-                    <div class="print-legend-title">Legenda</div>
-                    <div class="print-legend-grid">
-                        <div class="print-legend-item"><div class="print-box" style="background:var(--accent)"></div>Cárie Ativa</div>
-                        <div class="print-legend-item"><div class="print-box" style="background:var(--info)"></div>Obturado</div>
-                        <div class="print-legend-item"><div class="print-box" style="background:#ffffff; border: 1.5px solid var(--tra-plan)"></div>TRA Plan.</div>
-                        <div class="print-legend-item"><div class="print-box" style="background:var(--tra-done)"></div>TRA Realiz.</div>
-                        <div class="print-legend-item"><div class="print-box" style="background:var(--lost)"></div>Perdido</div>
-                        <div class="print-legend-item"><div class="print-box" style="background:#ffcccc; border: 1px solid red"></div>Extração</div>
-                    </div>
-                </div>
-            </div>`;
-        gerarDentes(item.querySelector('.print-odontograma'), r);
-        area.appendChild(item);
+        
+        const printArea = document.getElementById('print-area');
+        printArea.innerHTML = construirHtmlPrintCard(r, detAtual);
         window.print();
     }
 
     window.gerarRelatorioMassa = function() {
         document.body.classList.remove('print-dashboard-mode');
-        if(dadosFiltradosAtuais.length === 0) {
-            alert("Nenhum registro encontrado com os critérios de filtragem atuais para impressão.");
+        if (dadosFiltradosAtuais.length === 0) {
+            alert("Nenhum registro selecionado para impressão.");
             return;
         }
-        const area = document.getElementById('print-area'); area.innerHTML = '';
-        
-        // Ordena os registros em ordem alfabética pelo nome do paciente
-        const registrosOrdenados = [...dadosFiltradosAtuais].sort((a, b) => {
-            const nomeA = (a.n || '').trim();
-            const nomeB = (b.n || '').trim();
-            return nomeA.localeCompare(nomeB, 'pt-BR', { sensitivity: 'base' });
+        const printArea = document.getElementById('print-area');
+        let htmlGeral = "";
+        dadosFiltradosAtuais.forEach(r => {
+            let detAtual = r.det || [];
+            htmlGeral += construirHtmlPrintCard(r, detAtual);
         });
-
-        registrosOrdenados.forEach(r => {
-            const ind = calcularMultiplosIndices(r.det || []);
-            const item = document.createElement('div'); item.className = 'print-item';
-            item.innerHTML = `
-                <div class="print-card-header">
-                    <div class="pch-left">
-                        <span class="pch-brand">epi<span class="pch-accent">dent</span></span>
-                        <span class="pch-sub">· Monitoramento Epidemiológico</span>
-                    </div>
-                    <div class="pch-right">
-                        Ficha de Avaliação Individual
-                    </div>
-                </div>
-                <div class="print-body-grid">
-                    <div class="print-col-info">
-                        <div class="print-details-box">
-                            <div><b>Paciente:</b> ${(r.n || '').toUpperCase()}</div>
-                            <div><b>Escola:</b> ${(r.e || '').toUpperCase()}</div>
-                            <div><b>Turma:</b> ${(r.t || '').toUpperCase()}</div>
-                            <div><b>Idade:</b> ${r.i || 0} anos</div>
-                            <div><b>Data:</b> ${r.d ? r.d.split('-').reverse().join('/') : ''}</div>
-                            <div><b>Avaliador:</b> ${r.a || 'NÃO INFORMADO'}</div>
-                        </div>
-                        <div class="print-indices-box">
-                            <div class="pi-item">CPO-D <b>${ind.cpod}</b></div>
-                            <div class="pi-item">CEO-D <b>${ind.ceod}</b></div>
-                            <div class="pi-item-total">TOTAL <b>${ind.total}</b></div>
-                        </div>
-                    </div>
-                    
-                    <div class="print-col-odontograma">
-                        <div class="print-odontograma"></div>
-                    </div>
-                    
-                    <div class="print-col-legend">
-                        <div class="print-legend-title">Legenda</div>
-                        <div class="print-legend-grid">
-                            <div class="print-legend-item"><div class="print-box" style="background:var(--accent)"></div>Cárie Ativa</div>
-                            <div class="print-legend-item"><div class="print-box" style="background:var(--info)"></div>Obturado</div>
-                            <div class="print-legend-item"><div class="print-box" style="background:#ffffff; border: 1.5px solid var(--tra-plan)"></div>TRA Plan.</div>
-                            <div class="print-legend-item"><div class="print-box" style="background:var(--tra-done)"></div>TRA Realiz.</div>
-                            <div class="print-legend-item"><div class="print-box" style="background:var(--lost)"></div>Perdido</div>
-                            <div class="print-legend-item"><div class="print-box" style="background:#ffcccc; border: 1px solid red"></div>Extração</div>
-                        </div>
-                    </div>
-                </div>`;
-            gerarDentes(item.querySelector('.print-odontograma'), r);
-            area.appendChild(item);
-        });
+        printArea.innerHTML = htmlGeral;
         window.print();
     }
 
     window.exportarCSV = function() {
-        let csv = "Data_Exame;Paciente;Nascimento;Idade_Anos;Escola;Avaliador;CPO-D;CEO-D;Indice_Total\n";
+        if(dadosFiltradosAtuais.length === 0) {
+            alert("Não há dados filtrados disponíveis para exportação.");
+            return;
+        }
+        let csvContent = "data:text/csv;charset=utf-8,\uFEFF";
+        csvContent += "Nome;Escola;Turma;Data Nascimento;Idade;Data Exame;Avaliador;Observações;CPO-D Permanente;CEO-D Decíduo;Índice Total\n";
+        
         dadosFiltradosAtuais.forEach(p => {
             const ind = calcularMultiplosIndices(p.det || []);
-            csv += `${p.d || ''};${p.n || ''};${p.nasc || ''};${p.i || ''};${p.e || ''};${p.a || ''};${ind.cpod};${ind.ceod};${ind.total}\n`;
+            const obsLimpas = (p.obs || "").replace(/;/g, ",").replace(/\n/g, " ");
+            const linha = [
+                `"${p.n || ''}"`,
+                `"${p.e || ''}"`,
+                `"${p.t || ''}"`,
+                `"${p.nasc || ''}"`,
+                `"${p.i || 0}"`,
+                `"${p.d || ''}"`,
+                `"${p.a || ''}"`,
+                `"${obsLimpas}"`,
+                ind.cpod,
+                ind.ceod,
+                ind.total
+            ].join(";");
+            csvContent += linha + "\n";
         });
-        const blob = new Blob(["\ufeff"+csv], {type:'text/csv'});
-        const a = document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='CPO_CEO_Filtrados.csv'; a.click();
-    }
 
-    window.resetarApp = function() {
-        editandoId = null; document.getElementById('aviso-edicao').style.display = 'none';
-        document.getElementById('btn-pdf').style.display = 'none'; document.getElementById('cpod-box').style.display = 'none';
-        document.getElementById('nome').value = ''; document.getElementById('escola').value = '';
-        document.getElementById('turma').value = ''; document.getElementById('data_nascimento').value = '';
-        document.getElementById('idade').value = ''; 
-        document.getElementById('data_exame').value = new Date().toISOString().split('T')[0];
-        document.getElementById('paciente-timeline').style.display = 'none';
-        gerarDentes(box);
+        const encodedUri = encodeURI(csvContent);
+        const link = document.createElement("a");
+        link.setAttribute("href", encodedUri);
+        link.setAttribute("download", `epident_export_${new Date().toISOString().split('T')[0]}.csv`);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
     }
 </script>
 </body>
