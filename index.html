@@ -938,7 +938,6 @@
             dadosLocaisMemoria.push({ id: docSnap.id, ...docSnap.data() });
         });
         
-        // CORREÇÃO: Agrupar por nome do paciente e manter apenas a ficha mais recente para cálculos e listagens padrão
         const mapaMaisRecente = {};
         dadosLocaisMemoria.forEach(p => {
             const nomeChave = (p.n || "").trim().toUpperCase();
@@ -990,7 +989,6 @@
         const buscaCondicao = document.getElementById('search-hist-condicao').value;
         const buscaEncaminhado = document.getElementById('search-hist-encaminhado').value;
         
-        // Obter lista única consolidada com o registro mais recente de cada aluno
         const mapaMaisRecente = {};
         dadosLocaisMemoria.forEach(p => {
             const nomeChave = (p.n || "").trim().toUpperCase();
@@ -1216,6 +1214,7 @@
         let analiseEscolas = {};
         let analiseIdades = {};
         let listaPrioridadesCriancas = [];
+        
         let ocorrenciasGlobais = { C: 0, O: 0, T: 0, R: 0, X: 0, P: 0 };
 
         dadosFiltrados.forEach(p => {
@@ -1227,17 +1226,34 @@
             
             let totalDentesCriticos = 0;
             let dentesJaContadosCriticos = new Set();
+            let dentesUnicosX = new Set();
+            let dentesUnicosP = new Set();
 
             if(p.det) {
                 p.det.forEach(item => {
-                    if (ocorrenciasGlobais[item.s] !== undefined) {
+                    const numDente = parseInt(item.d);
+                    
+                    // REQUISITO: C, O, T, R contam por face (cada registro no det conta +1)
+                    if (['C', 'O', 'T', 'R'].includes(item.s)) {
                         ocorrenciasGlobais[item.s]++;
                     }
+                    
+                    // X e P contam por dente único por paciente
+                    if (item.s === 'X') {
+                        dentesUnicosX.add(numDente);
+                    } else if (item.s === 'P') {
+                        dentesUnicosP.add(numDente);
+                    }
+
                     if (['C', 'X', 'P', 'T'].includes(item.s)) {
-                        dentesJaContadosCriticos.add(parseInt(item.d));
+                        dentesJaContadosCriticos.add(numDente);
                     }
                 });
             }
+
+            ocorrenciasGlobais['X'] += dentesUnicosX.size;
+            ocorrenciasGlobais['P'] += dentesUnicosP.size;
+
             totalDentesCriticos = dentesJaContadosCriticos.size;
 
             if (totalDentesCriticos > 0) {
@@ -1365,7 +1381,7 @@
             data: {
                 labels: ['Cárie', 'Obturado', 'TRA P.', 'TRA R.', 'E.I.', 'Perdido'],
                 datasets: [{
-                    label: 'Distribuição Total de Ocorrências no Grupo',
+                    label: 'Distribuição Total de Ocorrências',
                     data: [ocorrenciasGlobais['C'], ocorrenciasGlobais['O'], ocorrenciasGlobais['T'], ocorrenciasGlobais['R'], ocorrenciasGlobais['X'], ocorrenciasGlobais['P']],
                     backgroundColor: [
                         'rgba(211, 47, 47, 0.75)',  
