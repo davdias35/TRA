@@ -551,6 +551,13 @@
         </div>
     </div>
 
+    <!-- BOTÃO DE ENCAMINHAMENTO DE PACIENTE -->
+    <div style="margin-bottom: 10px;">
+        <button type="button" id="btn-toggle-encaminhamento" onclick="alternarEncaminhamento()" style="width: 100%; background: #64748b; font-size: 11px; padding: 10px; border-radius: 8px; border: none; color: white; font-weight: bold; cursor: pointer; transition: background 0.2s;">
+            📋 Status de Encaminhamento: NÃO ENCAMINHADO
+        </button>
+    </div>
+
     <div id="paciente-timeline" class="timeline-container">
         <div class="timeline-title">⏳ Histórico de Evoluções Clínicas Deste Paciente:</div>
         <div id="timeline-badges-list" class="timeline-items"></div>
@@ -619,6 +626,13 @@
                     <option value="P">⚫ Perdido/Extraído</option>
                 </select>
             </div>
+            <div style="margin-top: 4px;">
+                <select id="search-hist-encaminhado" onchange="filtrarHistoricoLocal()" style="width: 100%;">
+                    <option value="">📌 Todos os Status de Encaminhamento</option>
+                    <option value="sim">🔄 Apenas Encaminhados</option>
+                    <option value="nao">⚪ Apenas Não Encaminhados</option>
+                </select>
+            </div>
         </div>
         <div id="lista-cards"></div>
         <button id="btn-load-more" class="btn-load-more" onclick="incrementarPagina()" style="display:none;">🔄 Carregar Mais Registros</button>
@@ -646,7 +660,7 @@
         </div>
     </div>
 
-    <!-- AJUSTE REALIZADO: CHECKBOX DE ANONIMIZAÇÃO -->
+    <!-- CHECKBOX DE ANONIMIZAÇÃO -->
     <div class="anonymous-option">
         <input type="checkbox" id="chk-anonimo-bi">
         <label for="chk-anonimo-bi">🔒 Ocultar nomes das crianças no relatório impresso</label>
@@ -785,6 +799,7 @@
     let dadosFiltradosAtuais = []; 
     let ferramentaAtiva = "H"; 
     let usuarioAtual = { nome: "", matricula: "" };
+    let statusEncaminhadoAtual = false;
 
     let escolasSelecionadas = [];
     let idadesSelecionadas = [];
@@ -798,6 +813,22 @@
             document.getElementById('data_exame').value = new Date().toISOString().split('T')[0];
         }
     });
+
+    window.alternarEncaminhamento = function() {
+        statusEncaminhadoAtual = !statusEncaminhadoAtual;
+        atualizarVisualBotaoEncaminhamento();
+    }
+
+    function atualizarVisualBotaoEncaminhamento() {
+        const btn = document.getElementById('btn-toggle-encaminhamento');
+        if (statusEncaminhadoAtual) {
+            btn.style.background = "#e67e22"; 
+            btn.innerText = "🚨 Status de Encaminhamento: ENCAMINHADO";
+        } else {
+            btn.style.background = "#64748b"; 
+            btn.innerText = "📋 Status de Encaminhamento: NÃO ENCAMINHADO";
+        }
+    }
 
     window.calcularIdadeAutomatica = function() {
         const nascInput = document.getElementById('data_nascimento').value;
@@ -947,6 +978,7 @@
         const buscaTurma = document.getElementById('search-hist-turma').value;
         const buscaData = document.getElementById('search-hist-data').value;
         const buscaCondicao = document.getElementById('search-hist-condicao').value;
+        const buscaEncaminhado = document.getElementById('search-hist-encaminhado').value;
         
         dadosFiltradosAtuais = dadosLocaisMemoria.filter(p => {
             const bateNome = !buscaNome || (p.n && p.n.toUpperCase().includes(buscaNome));
@@ -954,10 +986,15 @@
             const bateTurma = !buscaTurma || (p.t && p.t.trim().toUpperCase() === buscaTurma);
             const bateData = !buscaData || (p.d === buscaData);
             const bateCondicao = !buscaCondicao || (p.det && p.det.some(item => item.s === buscaCondicao));
-            return bateNome && bateEscola && bateTurma && bateData && bateCondicao;
+            
+            let bateEncaminhado = true;
+            if (buscaEncaminhado === 'sim') bateEncaminhado = p.encaminhado === true;
+            if (buscaEncaminhado === 'nao') bateEncaminhado = !p.encaminhado;
+
+            return bateNome && bateEscola && bateTurma && bateData && bateCondicao && bateEncaminhado;
         });
         
-        const algumFiltroAtivo = buscaNome || buscaEscola || buscaTurma || buscaData || buscaCondicao;
+        const algumFiltroAtivo = buscaNome || buscaEscola || buscaTurma || buscaData || buscaCondicao || buscaEncaminhado;
         const btnMassa = document.getElementById('btn-massa-dinamico');
         
         if (algumFiltroAtivo) {
@@ -988,10 +1025,12 @@
         lista.forEach(item => {
             const ind = calcularMultiplosIndices(item.det || []);
             const dataFmt = item.d ? item.d.split('-').reverse().join('/') : 'S/D';
+            const badgeEncaminhamento = item.encaminhado ? `<span style="background:#e67e22; color:white; padding:2px 6px; border-radius:4px; font-size:8px; font-weight:bold; margin-left:4px;">🚨 ENCAMINHADO</span>` : '';
+            
             html += `
                 <div class="card" onclick="visualizar('${item.id}')">
                     <div class="card-info">
-                        <div style="font-weight:bold; font-size:11px; color:var(--primary);">${item.n || 'SEM NOME'}</div>
+                        <div style="font-weight:bold; font-size:11px; color:var(--primary);">${item.n || 'SEM NOME'} ${badgeEncaminhamento}</div>
                         <div><b>Escola:</b> ${item.e || 'S/E'} | <b>Turma:</b> ${item.t || 'S/T'}</div>
                         <div><b>Data:</b> ${dataFmt} | <b>Idade:</b> ${item.i || 0} anos</div>
                         <div style="margin-top:2px; font-weight:bold; color:#2c3e50;">CPO-D: ${ind.cpod} | CEO-D: ${ind.ceod} | Total: ${ind.total}</div>
@@ -1371,7 +1410,6 @@
         if(chartIdadesInstance) chartIdadesInstance.destroy();
     }
 
-    // AJUSTE NA LÓGICA DE IMPRESSÃO BI
     document.getElementById('btn-print-dash').onclick = function() {
         document.body.classList.add('print-dashboard-mode');
         if(document.getElementById('chk-anonimo-bi').checked) {
@@ -1595,6 +1633,7 @@
             nasc: nascInput,
             d: document.getElementById('data_exame').value || new Date().toISOString().split('T')[0], 
             obs: document.getElementById('obs').value.trim(),
+            encaminhado: statusEncaminhadoAtual,
             det, 
             criadoEm: new Date().getTime()
         };
@@ -1622,6 +1661,10 @@
         document.getElementById('idade').value = r.i || ''; 
         document.getElementById('data_exame').value = r.d || '';
         document.getElementById('obs').value = r.obs || '';
+        
+        statusEncaminhadoAtual = !!r.encaminhado;
+        atualizarVisualBotaoEncaminhamento();
+
         gerarDentes(box, r); 
         window.atualizarCalculo(); 
         const evolucoesDoPaciente = dadosLocaisMemoria.filter(x => x.n === r.n).sort((a,b) => parseFloat(a.i) - parseFloat(b.i));
@@ -1778,11 +1821,12 @@
     }
 
     window.exportarCSV = function() {
-        let csv = "Data_Exame;Paciente;Nascimento;Idade_Anos;Escola;Avaliador;Observacoes;CPO-D;CEO-D;Indice_Total\n";
+        let csv = "Data_Exame;Paciente;Nascimento;Idade_Anos;Escola;Avaliador;Observacoes;Encaminhado;CPO-D;CEO-D;Indice_Total\n";
         dadosFiltradosAtuais.forEach(p => {
             const ind = calcularMultiplosIndices(p.det || []);
             const obsLimpa = (p.obs || '').replace(/;/g, ',').replace(/\n/g, ' ');
-            csv += `${p.d || ''};${p.n || ''};${p.nasc || ''};${p.i || ''};${p.e || ''};${p.a || ''};${obsLimpa};${ind.cpod};${ind.ceod};${ind.total}\n`;
+            const statusEnc = p.encaminhado ? "SIM" : "NAO";
+            csv += `${p.d || ''};${p.n || ''};${p.nasc || ''};${p.i || ''};${p.e || ''};${p.a || ''};${obsLimpa};${statusEnc};${ind.cpod};${ind.ceod};${ind.total}\n`;
         });
         const blob = new Blob(["\ufeff"+csv], {type:'text/csv'});
         const a = document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='CPO_CEO_Filtrados.csv'; a.click();
@@ -1796,6 +1840,10 @@
         document.getElementById('idade').value = ''; document.getElementById('obs').value = '';
         document.getElementById('data_exame').value = new Date().toISOString().split('T')[0];
         document.getElementById('paciente-timeline').style.display = 'none';
+        
+        statusEncaminhadoAtual = false;
+        atualizarVisualBotaoEncaminhamento();
+
         gerarDentes(box);
     }
 </script>
