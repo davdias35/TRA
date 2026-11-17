@@ -281,7 +281,6 @@
                 order: 99 !important;
             }
 
-            /* OCULTAR NOME DAS CRIANÇAS SE SELECIONADO NA IMPRESSÃO */
             body.hide-names .col-nome-paciente {
                 display: none !important;
             }
@@ -938,11 +937,22 @@
         snapshot.forEach((docSnap) => {
             dadosLocaisMemoria.push({ id: docSnap.id, ...docSnap.data() });
         });
-        dadosFiltradosAtuais = [...dadosLocaisMemoria];
-        atualizarSelectsDeBuscaHistorico(dadosLocaisMemoria);
+        
+        // CORREÇÃO: Agrupar por nome do paciente e manter apenas a ficha mais recente para cálculos e listagens padrão
+        const mapaMaisRecente = {};
+        dadosLocaisMemoria.forEach(p => {
+            const nomeChave = (p.n || "").trim().toUpperCase();
+            if (!nomeChave) return;
+            if (!mapaMaisRecente[nomeChave] || (p.criadoEm || 0) > (mapaMaisRecente[nomeChave].criadoEm || 0)) {
+                mapaMaisRecente[nomeChave] = p;
+            }
+        });
+        const dadosUnicosRecentes = Object.values(mapaMaisRecente);
+
+        atualizarSelectsDeBuscaHistorico(dadosUnicosRecentes);
         window.filtrarHistoricoLocal();
-        atualizarListasDeFiltros(dadosLocaisMemoria);
-        processarDadosEpidemiologicos(dadosLocaisMemoria);
+        atualizarListasDeFiltros(dadosUnicosRecentes);
+        processarDadosEpidemiologicos(dadosUnicosRecentes);
     });
 
     function atualizarSelectsDeBuscaHistorico(dados) {
@@ -980,7 +990,18 @@
         const buscaCondicao = document.getElementById('search-hist-condicao').value;
         const buscaEncaminhado = document.getElementById('search-hist-encaminhado').value;
         
-        dadosFiltradosAtuais = dadosLocaisMemoria.filter(p => {
+        // Obter lista única consolidada com o registro mais recente de cada aluno
+        const mapaMaisRecente = {};
+        dadosLocaisMemoria.forEach(p => {
+            const nomeChave = (p.n || "").trim().toUpperCase();
+            if (!nomeChave) return;
+            if (!mapaMaisRecente[nomeChave] || (p.criadoEm || 0) > (mapaMaisRecente[nomeChave].criadoEm || 0)) {
+                mapaMaisRecente[nomeChave] = p;
+            }
+        });
+        const dadosUnicosRecentes = Object.values(mapaMaisRecente);
+
+        dadosFiltradosAtuais = dadosUnicosRecentes.filter(p => {
             const bateNome = !buscaNome || (p.n && p.n.toUpperCase().includes(buscaNome));
             const bateEscola = !buscaEscola || (p.e && p.e.trim().toUpperCase() === buscaEscola);
             const bateTurma = !buscaTurma || (p.t && p.t.trim().toUpperCase() === buscaTurma);
@@ -1010,7 +1031,7 @@
             } else {
                 document.getElementById('btn-load-more').style.display = 'none';
             }
-            btnMassa.innerText = `📄 PDF de Todos da Nuvem (${dadosLocaisMemoria.length})`;
+            btnMassa.innerText = `📄 PDF de Todos da Nuvem (${dadosUnicosRecentes.length})`;
             btnMassa.style.background = "#8e44ad";
         }
     }
@@ -1161,7 +1182,15 @@
         else if(idadesSelecionadas.length === 1) lblId.innerText = `${idadesSelecionadas[0]} anos`;
         else lblId.innerText = `${idadesSelecionadas.length} Idades`;
 
-        processarDadosEpidemiologicos(dadosLocaisMemoria);
+        const mapaMaisRecente = {};
+        dadosLocaisMemoria.forEach(p => {
+            const nomeChave = (p.n || "").trim().toUpperCase();
+            if (!nomeChave) return;
+            if (!mapaMaisRecente[nomeChave] || (p.criadoEm || 0) > (mapaMaisRecente[nomeChave].criadoEm || 0)) {
+                mapaMaisRecente[nomeChave] = p;
+            }
+        });
+        processarDadosEpidemiologicos(Object.values(mapaMaisRecente));
     }
 
     function processarDadosEpidemiologicos(dados) {
